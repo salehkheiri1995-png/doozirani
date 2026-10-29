@@ -1,0 +1,8 @@
+# Keep shell scripts LF so they run on Linux VPS clones.
+*.sh text eol=lf
+*.ps1 text eol=crlf
+
+*.jks binary
+*.7z binary
+*.apk binary
+*.pem text eol=lf
