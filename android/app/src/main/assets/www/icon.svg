@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <radialGradient id="woodBg" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#3a2517"/>
+      <stop offset="60%" stop-color="#21150c"/>
+      <stop offset="100%" stop-color="#120a05"/>
+    </radialGradient>
+    <radialGradient id="goldRim" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" stop-color="#fef08a"/>
+      <stop offset="40%" stop-color="#eab308"/>
+      <stop offset="100%" stop-color="#854d0e"/>
+    </radialGradient>
+    <radialGradient id="turquoise" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#5eead4"/>
+      <stop offset="50%" stop-color="#0d9488"/>
+      <stop offset="100%" stop-color="#115e59"/>
+    </radialGradient>
+    <radialGradient id="ruby" cx="35%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#fda4af"/>
+      <stop offset="50%" stop-color="#e11d48"/>
+      <stop offset="100%" stop-color="#881337"/>
+    </radialGradient>
+    <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.8"/>
+    </filter>
+  </defs>
+
+  <!-- App Background (Android Safe Zone compliant) -->
+  <rect width="512" height="512" rx="110" fill="url(#woodBg)"/>
+  <rect width="472" height="472" x="20" y="20" rx="90" fill="none" stroke="#854d0e" stroke-width="8" opacity="0.6"/>
+
+  <!-- Center Iranian Dooz Board Rhombus Lockup -->
+  <g transform="translate(256, 256)" filter="url(#dropShadow)">
+    <!-- Golden Diamond Plate -->
+    <rect x="-140" y="-140" width="280" height="280" rx="45" transform="rotate(45)" fill="#1c120a" stroke="url(#goldRim)" stroke-width="10"/>
+
+    <!-- Inner Board Lines -->
+    <rect x="-90" y="-90" width="180" height="180" rx="15" fill="none" stroke="#a16207" stroke-width="6" opacity="0.75"/>
+    <line x1="-90" y1="0" x2="90" y2="0" stroke="#a16207" stroke-width="6" opacity="0.75"/>
+    <line x1="0" y1="-90" x2="0" y2="90" stroke="#a16207" stroke-width="6" opacity="0.75"/>
+    <line x1="-90" y1="-90" x2="90" y2="90" stroke="#854d0e" stroke-width="4" opacity="0.6"/>
+    <line x1="90" y1="-90" x2="-90" y2="90" stroke="#854d0e" stroke-width="4" opacity="0.6"/>
+
+    <!-- Turquoise Stones (Player 1) -->
+    <circle cx="-90" cy="-90" r="28" fill="url(#turquoise)" stroke="#ccfbf1" stroke-width="4"/>
+    <circle cx="0" cy="0" r="32" fill="url(#turquoise)" stroke="#ccfbf1" stroke-width="4"/>
+    <circle cx="90" cy="90" r="28" fill="url(#turquoise)" stroke="#ccfbf1" stroke-width="4"/>
+
+    <!-- Ruby Stones (Player 2) -->
+    <circle cx="90" cy="-90" r="28" fill="url(#ruby)" stroke="#ffe4e6" stroke-width="4"/>
+    <circle cx="-90" cy="90" r="28" fill="url(#ruby)" stroke="#ffe4e6" stroke-width="4"/>
+  </g>
+
+  <!-- Title Ribbon Text at bottom -->
+  <text x="256" y="475" text-anchor="middle" font-family="sans-serif" font-weight="900" font-size="34" fill="#fef08a" letter-spacing="2">
+    دوز اصیل ایرانی
+  </text>
+</svg>

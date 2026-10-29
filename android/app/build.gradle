@@ -9,6 +9,6 @@ android { namespace 'dooz.tapcell';compileSdk 35
  compileOptions { sourceCompatibility JavaVersion.VERSION_17;targetCompatibility JavaVersion.VERSION_17 }
 }
 tasks.register('buildWeb',Exec){workingDir rootProject.file('..');commandLine System.getProperty('os.name').toLowerCase().contains('windows')?['cmd','/c','npm','run','build']:['npm','run','build']}
-tasks.register('syncWebAssets',Sync){dependsOn ':buildWeb';from rootProject.file('../dist');into layout.projectDirectory.dir('src/main/assets/www');exclude '**/*.apk','**/*.idsig';doFirst{delete layout.projectDirectory.dir('src/main/assets/www')}}
+tasks.register('syncWebAssets',Sync){dependsOn 'buildWeb';from rootProject.file('../dist');into layout.projectDirectory.dir('src/main/assets/www');exclude '**/*.apk','**/*.idsig','**/*.mp4','**/*.zip';doFirst{delete layout.projectDirectory.dir('src/main/assets/www')}}
 preBuild.dependsOn syncWebAssets
 dependencies { implementation 'androidx.appcompat:appcompat:1.7.1';implementation 'ir.tapsell:tapsell:1.4.0-alpha04';implementation 'ir.tapsell.mediation.adapter:legacy:1.4.0-alpha04' }
