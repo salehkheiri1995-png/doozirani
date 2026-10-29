@@ -659,7 +659,7 @@ export default function App() {
                 </div>
                 <div>
                   <span className="font-black text-sm text-yellow-200 block">فروشگاه مهره‌ها و کسب درآمد</span>
-                  <span className="text-[11px] text-amber-300/80 block">تماشای فیلم تبلیغاتی (+۱۰۰ سکه) و آموزش کسب درآمد</span>
+                  <span className="text-[11px] text-amber-300/80 block">تماشای فیلم تبلیغاتی (+۱۰۰ سکه)</span>
                 </div>
               </div>
             </button>

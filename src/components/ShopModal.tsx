@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
-import { Coins, Video, Check, ShoppingBag, X, HelpCircle, DollarSign, Sparkles } from 'lucide-react';
+import { Coins, Video, Check, ShoppingBag, X } from 'lucide-react';
 import { CosmeticSkin, INITIAL_SKINS, getUnlockedSkinIds, unlockSkin, getActiveSkinId, setActiveSkinId, savePlayerCoins } from '../utils/monetization';
 import { playStonePlaceSound, playVictorySound } from '../utils/audio';
-import { getTapsellImpressions } from '../utils/tapsellService';
 
 interface ShopModalProps {
   isOpen: boolean;
@@ -19,7 +18,6 @@ export const ShopModal: React.FC<ShopModalProps> = ({
   onWatchAdClick,
   onClose,
 }) => {
-  const [activeTab, setActiveTab] = useState<'shop' | 'guide'>('shop');
   const [unlockedSkins, setUnlockedSkins] = useState<string[]>(getUnlockedSkinIds());
   const [activeSkin, setActiveSkin] = useState<string>(getActiveSkinId());
 
@@ -75,37 +73,8 @@ export const ShopModal: React.FC<ShopModalProps> = ({
           </div>
         </div>
 
-        {/* Tab switcher */}
-        <div className="flex gap-2 my-3">
-          <button
-            type="button"
-            onClick={() => setActiveTab('shop')}
-            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-              activeTab === 'shop'
-                ? 'bg-amber-600 text-white shadow-md'
-                : 'bg-stone-900 text-stone-300 hover:bg-stone-800'
-            }`}
-          >
-            مهره‌ها و تماشای تبلیغ
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab('guide')}
-            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-              activeTab === 'guide'
-                ? 'bg-amber-600 text-white shadow-md'
-                : 'bg-stone-900 text-stone-300 hover:bg-stone-800'
-            }`}
-          >
-            <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
-            آموزش کسب درآمد از بازی
-          </button>
-        </div>
-
         {/* Body */}
         <div className="overflow-y-auto pr-1 flex-1 space-y-3">
-          {activeTab === 'shop' ? (
-            <>
               {/* Rewarded Ad Watch Action Card */}
               <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-950/80 via-yellow-950/60 to-amber-950/80 border-2 border-yellow-500/60 shadow-lg text-center">
                 <span className="text-xs font-bold text-amber-200 block mb-1">
@@ -178,106 +147,6 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                   );
                 })}
               </div>
-            </>
-          ) : (
-            /* Monetization Guide for Iran and International */
-            <div className="space-y-3 text-right text-xs leading-relaxed text-stone-200">
-              {/* Active Tapsell Key Status Banner */}
-              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-teal-950/70 to-emerald-950/80 border-2 border-emerald-500/70 shadow-lg space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 font-black text-emerald-300 text-sm">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping" />
-                    <span>پنل تبلیغات تپسل: دوز اصیل ایرانی</span>
-                  </div>
-                  <span className="px-2 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-300 font-bold text-[10px]">
-                    شناسه: dooz.tapcell
-                  </span>
-                </div>
-
-                {/* App Key */}
-                <div>
-                  <span className="text-[10px] text-emerald-300 block mb-1">کلید اپلیکیشن (AppKey):</span>
-                  <div className="p-1.5 rounded-lg bg-black/60 border border-emerald-600/40 font-mono text-[10px] text-emerald-300 break-all select-all text-left" dir="ltr">
-                    noeafdfetsmgcntkdreroijahroqspqmjqbjptrprbidjioqloqnoalnpmtnoldqglnsge
-                  </div>
-                </div>
-
-                {/* The 3 Active Zones from user's panel */}
-                <div className="space-y-1.5 pt-1">
-                  <span className="text-[10px] text-amber-200 font-bold block">تبلیغگاه‌های متصل پنل شما:</span>
-
-                  {/* Zone 1: s01 Rewarded Video */}
-                  <div className="p-2 rounded-xl bg-black/40 border border-emerald-600/30 flex items-center justify-between text-[10px]">
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-amber-300">۱. تبلیغگاه s01 (ویدئو جایزه‌ای)</span>
-                        <span className="bg-emerald-500/20 text-emerald-400 text-[9px] px-1.5 py-0.2 rounded border border-emerald-500/30">حالت تست</span>
-                      </div>
-                      <span className="text-stone-400">تماشای فیلم در فروشگاه و پایان بازی (+۱۰۰ سکه)</span>
-                    </div>
-                    <span className="font-mono text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/30" dir="ltr">
-                      6ae1bd1817758066a4da86c1
-                    </span>
-                  </div>
-
-                  {/* Zone 2: Standard Banner */}
-                  <div className="p-2 rounded-xl bg-black/40 border border-emerald-600/30 flex items-center justify-between text-[10px]">
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-amber-300">۲. بنر استاندارد</span>
-                        <span className="bg-emerald-500/20 text-emerald-400 text-[9px] px-1.5 py-0.2 rounded border border-emerald-500/30">حالت تست</span>
-                      </div>
-                      <span className="text-stone-400">نمایش بنر تبلیغاتی حامی بازی در صفحات منو</span>
-                    </div>
-                    <span className="font-mono text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/30" dir="ltr">
-                      6ae1bdbd35198b5ded9c8803
-                    </span>
-                  </div>
-
-                  {/* Zone 3: Interstitial Video */}
-                  <div className="p-2 rounded-xl bg-black/40 border border-emerald-600/30 flex items-center justify-between text-[10px]">
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-amber-300">۳. پیش نمایشی (ویدئو میان‌صفحه‌ای)</span>
-                        <span className="bg-emerald-500/20 text-emerald-400 text-[9px] px-1.5 py-0.2 rounded border border-emerald-500/30">حالت تست</span>
-                      </div>
-                      <span className="text-stone-400">پخش بین دست‌های بازی</span>
-                    </div>
-                    <span className="font-mono text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-500/30" dir="ltr">
-                      6ae1bdde187ee67e6b59bcd8
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 pt-1 text-center">
-                  <div className="p-2 rounded-xl bg-emerald-900/40 border border-emerald-700/50">
-                    <span className="text-[10px] text-stone-300 block">نمایش روی این دستگاه</span>
-                    <span className="text-sm font-black text-emerald-300">{getTapsellImpressions()} بار</span>
-                  </div>
-                  <div className="p-2 rounded-xl bg-emerald-900/40 border border-emerald-700/50">
-                    <span className="text-[10px] text-stone-300 block">تخمین درآمد ثبت‌شده</span>
-                    <span className="text-sm font-black text-yellow-300">
-                      {(getTapsellImpressions() * 300).toLocaleString('fa-IR')} تومان
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="p-3 rounded-2xl bg-stone-900/70 border border-stone-800 space-y-1.5">
-                <h4 className="font-bold text-amber-300">نحوه تسویه حساب و دریافت پول به حساب بانکی</h4>
-                <p className="text-[11px] text-stone-300">
-                  در پنل تپسل خود در سایت <strong>tapsell.ir</strong>، به بخش «مدیریت مالی» بروید و شماره شبای بانکی خود را ثبت کنید. تپسل در پایان هر ماه درآمد حاصل از تماشای ویدیوها توسط بازیکنان را به تومان مستقیماً به حسابتان واریز می‌کند.
-                </p>
-              </div>
-
-              <div className="p-3 rounded-2xl bg-amber-950/40 border border-amber-800/40 space-y-1">
-                <h4 className="font-bold text-amber-200">۲. درآمد بیشتر با افزایش بازیکنان</h4>
-                <p className="text-[11px] text-stone-300">
-                  وقتی بازی را در <strong>کافه‌بازار</strong> یا <strong>مایکت</strong> منتشر کنید، اگر مثلاً روزانه ۱۰۰۰ کاربر داشته باشید و هر کاربر فقط ۳ بار فیلم تبلیغاتی ببیند (۳۰۰۰ نمایش روزانه)، ماهانه مبالغ میلیونی به حساب شما واریز خواهد شد.
-                </p>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* Footer */}

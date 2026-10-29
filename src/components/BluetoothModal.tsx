@@ -39,6 +39,16 @@ export const BluetoothModal: React.FC<BluetoothModalProps> = ({
     }
   }, [isOpen]);
 
+  useEffect(() => {
+    const reload = () => {
+      if (directMultiplayer.isNativeAndroidBluetoothAvailable()) {
+        directMultiplayer.loadPairedDevices();
+      }
+    };
+    window.addEventListener('doozBtPermissionGranted', reload);
+    return () => window.removeEventListener('doozBtPermissionGranted', reload);
+  }, []);
+
   if (!isOpen) return null;
 
   const handleCreateRoom = async () => {
