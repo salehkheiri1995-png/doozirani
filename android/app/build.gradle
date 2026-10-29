@@ -3,7 +3,7 @@ def props=new Properties();def local=rootProject.file('local.properties');if(loc
 def appId=System.getenv('TAPSELL_MEDIATION_APP_ID')?:props.getProperty('tapsell.mediation.appId','')
 def store=System.getenv('DOOZ_RELEASE_STORE_FILE'),storePass=System.getenv('DOOZ_RELEASE_STORE_PASSWORD'),alias=System.getenv('DOOZ_RELEASE_KEY_ALIAS'),keyPass=System.getenv('DOOZ_RELEASE_KEY_PASSWORD')
 android { namespace 'dooz.tapcell';compileSdk 35
- defaultConfig { applicationId 'dooz.tapcell';minSdk 21;targetSdk 35;versionCode 11;versionName '1.5.5';manifestPlaceholders=[TapsellMediationAppKey:appId] }
+ defaultConfig { applicationId 'dooz.tapcell';minSdk 21;targetSdk 35;versionCode 12;versionName '1.5.5';manifestPlaceholders=[TapsellMediationAppKey:appId] }
  signingConfigs { if(store&&storePass&&alias&&keyPass) release { storeFile file(store);storePassword storePass;keyAlias alias;keyPassword keyPass } }
  buildTypes { debug { minifyEnabled false };release { minifyEnabled true;shrinkResources true;proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),'proguard-rules.pro';if(signingConfigs.findByName('release'))signingConfig signingConfigs.release } }
  compileOptions { sourceCompatibility JavaVersion.VERSION_17;targetCompatibility JavaVersion.VERSION_17 }

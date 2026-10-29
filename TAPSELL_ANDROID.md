@@ -28,7 +28,24 @@ The debug APK goes to `android/app/build/outputs/apk/debug/app-debug.apk`; it is
 
 ## Release signing
 
-Use the original Bazaar keystore and keep it outside Git. Set `DOOZ_RELEASE_STORE_FILE`, `DOOZ_RELEASE_STORE_PASSWORD`, `DOOZ_RELEASE_KEY_ALIAS`, and `DOOZ_RELEASE_KEY_PASSWORD`, then run `./gradlew assembleRelease`. Verify package, versionCode and certificate with `apkanalyzer` and `apksigner`. Current versionCode is 6 and must exceed the published version.
+Never build a Bazaar update with Google AI Studio: its build sandbox generates a new signing key on every build and does not keep it, so its APKs cannot update an already published app.
+
+Sign locally with the permanent key in `android/keystore/dooz-release.jks` (git-ignored, SHA-1 `BE:09:01:79:...:0E:BB`). Load the credentials and build:
+
+```powershell
+cd android
+Get-Content keystore\credentials.env | Where-Object { $_ -match '^DOOZ_RELEASE_\w+=' } |
+  ForEach-Object { $k, $v = $_.Split('=', 2); Set-Item "env:$k" $v }
+.\gradlew.bat assembleRelease
+```
+
+The signed APK is `app/build/outputs/apk/release/app-release.apk` (an `-unsigned` file means the `DOOZ_RELEASE_*` variables were missing). Check it before uploading:
+
+```powershell
+pwsh -File ..\scripts\verify-apk-signature.ps1 -Apk app\build\outputs\apk\release\app-release.apk
+```
+
+`applicationId` must stay `dooz.tapcell` and `versionCode` must increase for every upload. See `BAZAAR_KEY_CHANGE.md` for the pending key-reset request and the backup rules.
 
 ## Logs and troubleshooting
 
