@@ -1,0 +1,10 @@
+{
+  "name": "بازی دوز اصیل ایرانی (بلوتوث و آفلاین)",
+  "description": "بازی دوز سنتی ۳ تایی و ۱۲ تایی ایرانی با قابلیت بازی دونفره بلوتوثی بین دو گوشی اندروید، آفلاین روی یک دستگاه و بازی با هوش مصنوعی.",
+  "requestFramePermissions": [
+    "bluetooth"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

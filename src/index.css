@@ -1,0 +1,44 @@
+@import "tailwindcss";
+
+@layer base {
+  * {
+    font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  body {
+    background-color: #120e0a;
+    color: #f5efe6;
+    overflow-x: hidden;
+    touch-action: manipulation;
+  }
+}
+
+/* Persian pattern styling & subtle wood board effects */
+.persian-wood {
+  background: radial-gradient(circle at 50% 30%, #3a2618 0%, #24160d 70%, #170d07 100%);
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.7);
+}
+
+.persian-board-border {
+  border: 4px solid #8c6239;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(0, 0, 0, 0.6);
+}
+
+/* Glassmorphism for Persian game HUD */
+.glass-panel {
+  background: rgba(36, 22, 13, 0.85);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(212, 175, 55, 0.2);
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+
+.animate-glow {
+  animation: pulse-glow 2s infinite ease-in-out;
+}
