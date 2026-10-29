@@ -35,7 +35,9 @@ import { GameOverModal } from './components/GameOverModal';
 import { RulesModal } from './components/RulesModal';
 import { ShopModal } from './components/ShopModal';
 import { RewardedAdModal } from './components/RewardedAdModal';
+import { InterstitialAdModal } from './components/InterstitialAdModal';
 import { TapsellBanner } from './components/TapsellBanner';
+import { useTapsell } from './hooks/useTapsell';
 import { getPlayerCoins, savePlayerCoins, addPlayerCoins } from './utils/monetization';
 import {
   playStonePlaceSound,
@@ -49,6 +51,7 @@ import {
 } from './utils/audio';
 import { BluetoothManager, BluetoothConnectionState } from './utils/bluetooth';
 import { P2PSyncEngine, RoomMessage } from './utils/p2pSync';
+import { directMultiplayer } from './utils/directMultiplayer';
 
 export default function App() {
   // App screen state ('title' | 'playing' | 'gameover')
@@ -75,9 +78,14 @@ export default function App() {
   const [isRulesOpen, setIsRulesOpen] = useState(false);
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [isRewardedAdOpen, setIsRewardedAdOpen] = useState(false);
+  const [isInterstitialOpen, setIsInterstitialOpen] = useState(false);
   const [isBluetoothOpen, setIsBluetoothOpen] = useState(false);
   const [isRoomOpen, setIsRoomOpen] = useState(false);
   const [roomId, setRoomId] = useState('1234');
+
+  // Official Tapsell Web SDK Integration Hook
+  const { isInitialized: isTapsellReady, stats: tapsellStats } = useTapsell();
+  const gamesFinishedCountRef = useRef(0);
 
   // Networking managers
   const [btState, setBtState] = useState<BluetoothConnectionState>({
@@ -131,6 +139,19 @@ export default function App() {
     );
     btManagerRef.current = bt;
 
+    directMultiplayer.setCallbacks(
+      (st) => {
+        setBtState((prev) => ({
+          ...prev,
+          isConnected: st.isConnected,
+          deviceName: st.deviceName,
+          isScanning: st.isScanning,
+          error: st.error,
+        }));
+      },
+      (msg) => handleRemoteMessage(msg)
+    );
+
     const p2p = new P2PSyncEngine(roomId, (msg) => {
       if (msg.sender !== 'player1') {
         handleP2PMessage(msg);
@@ -141,6 +162,7 @@ export default function App() {
     return () => {
       p2p.destroy();
       bt.disconnect();
+      directMultiplayer.disconnect();
     };
   }, [roomId]);
 
@@ -232,11 +254,22 @@ export default function App() {
     }
   }, [appState, mode, variant, threeState, twelveState, aiDifficulty]);
 
+  const checkAndShowInterstitialAd = () => {
+    gamesFinishedCountRef.current += 1;
+    // Show interstitial video ad (zone 6ae1bdde187ee67e6b59bcd8) after every 2 completed matches
+    if (gamesFinishedCountRef.current % 2 === 0) {
+      setTimeout(() => {
+        setIsInterstitialOpen(true);
+      }, 1000);
+    }
+  };
+
   // Apply Three Dooz State and check sound / victory
   const applyThreeDoozState = (next: ThreeDoozState) => {
     if (next.winner) {
       playVictorySound();
       setAppState('gameover');
+      checkAndShowInterstitialAd();
       if (next.winner === 'player1') {
         setScores(prev => ({ ...prev, player1: prev.player1 + 1 }));
         const updatedCoins = addPlayerCoins(30);
@@ -257,6 +290,7 @@ export default function App() {
     if (next.winner) {
       playVictorySound();
       setAppState('gameover');
+      checkAndShowInterstitialAd();
       if (next.winner === 'player1') {
         setScores(prev => ({ ...prev, player1: prev.player1 + 1 }));
         const updatedCoins = addPlayerCoins(50);
@@ -301,8 +335,11 @@ export default function App() {
           if (mode === 'p2p_room' && p2pEngineRef.current) {
             p2pEngineRef.current.send(threeState.turn, 'PLACE', { index });
           }
-          if (mode === 'bluetooth' && btManagerRef.current) {
-            btManagerRef.current.send({ type: 'PLACE_STONE', payload: { index } });
+          if (mode === 'bluetooth') {
+            if (btManagerRef.current) {
+              btManagerRef.current.send({ type: 'PLACE_STONE', payload: { index } });
+            }
+            directMultiplayer.sendMessage({ type: 'PLACE_STONE', payload: { index } });
           }
         }
       }
@@ -331,8 +368,11 @@ export default function App() {
             if (mode === 'p2p_room' && p2pEngineRef.current) {
               p2pEngineRef.current.send(threeState.turn, 'MOVE', { from, to: index });
             }
-            if (mode === 'bluetooth' && btManagerRef.current) {
-              btManagerRef.current.send({ type: 'MOVE_STONE', payload: { from, to: index } });
+            if (mode === 'bluetooth') {
+              if (btManagerRef.current) {
+                btManagerRef.current.send({ type: 'MOVE_STONE', payload: { from, to: index } });
+              }
+              directMultiplayer.sendMessage({ type: 'MOVE_STONE', payload: { from, to: index } });
             }
           }
         }
@@ -357,8 +397,11 @@ export default function App() {
             if (mode === 'p2p_room' && p2pEngineRef.current) {
               p2pEngineRef.current.send(twelveState.turn, 'REMOVE', { index });
             }
-            if (mode === 'bluetooth' && btManagerRef.current) {
-              btManagerRef.current.send({ type: 'REMOVE_STONE', payload: { index } });
+            if (mode === 'bluetooth') {
+              if (btManagerRef.current) {
+                btManagerRef.current.send({ type: 'REMOVE_STONE', payload: { index } });
+              }
+              directMultiplayer.sendMessage({ type: 'REMOVE_STONE', payload: { index } });
             }
           }
         }
@@ -376,8 +419,11 @@ export default function App() {
           if (mode === 'p2p_room' && p2pEngineRef.current) {
             p2pEngineRef.current.send(twelveState.turn, 'PLACE', { index });
           }
-          if (mode === 'bluetooth' && btManagerRef.current) {
-            btManagerRef.current.send({ type: 'PLACE_STONE', payload: { index } });
+          if (mode === 'bluetooth') {
+            if (btManagerRef.current) {
+              btManagerRef.current.send({ type: 'PLACE_STONE', payload: { index } });
+            }
+            directMultiplayer.sendMessage({ type: 'PLACE_STONE', payload: { index } });
           }
         }
       }
@@ -412,8 +458,11 @@ export default function App() {
             if (mode === 'p2p_room' && p2pEngineRef.current) {
               p2pEngineRef.current.send(twelveState.turn, 'MOVE', { from, to: index });
             }
-            if (mode === 'bluetooth' && btManagerRef.current) {
-              btManagerRef.current.send({ type: 'MOVE_STONE', payload: { from, to: index } });
+            if (mode === 'bluetooth') {
+              if (btManagerRef.current) {
+                btManagerRef.current.send({ type: 'MOVE_STONE', payload: { from, to: index } });
+              }
+              directMultiplayer.sendMessage({ type: 'MOVE_STONE', payload: { from, to: index } });
             }
           }
         }
@@ -753,21 +802,9 @@ export default function App() {
 
       <BluetoothModal
         isOpen={isBluetoothOpen}
-        btState={btState}
-        onScanAndConnect={async () => {
-          if (btManagerRef.current) {
-            await btManagerRef.current.requestAndConnectDevice();
-          }
-        }}
-        onSimulateConnect={() => {
-          if (btManagerRef.current) {
-            btManagerRef.current.simulateConnected();
-          }
-        }}
-        onDisconnect={() => {
-          if (btManagerRef.current) {
-            btManagerRef.current.disconnect();
-          }
+        onConnected={() => {
+          setMode('bluetooth');
+          startGame();
         }}
         onClose={() => setIsBluetoothOpen(false)}
       />
@@ -821,6 +858,11 @@ export default function App() {
           setCoins(next);
         }}
         onClose={() => setIsRewardedAdOpen(false)}
+      />
+
+      <InterstitialAdModal
+        isOpen={isInterstitialOpen}
+        onClose={() => setIsInterstitialOpen(false)}
       />
     </div>
   );
