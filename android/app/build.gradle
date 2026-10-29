@@ -1,0 +1,14 @@
+plugins { id 'com.android.application' }
+def props=new Properties();def local=rootProject.file('local.properties');if(local.exists())local.withInputStream{props.load(it)}
+def appId=System.getenv('TAPSELL_MEDIATION_APP_ID')?:props.getProperty('tapsell.mediation.appId','')
+def store=System.getenv('DOOZ_RELEASE_STORE_FILE'),storePass=System.getenv('DOOZ_RELEASE_STORE_PASSWORD'),alias=System.getenv('DOOZ_RELEASE_KEY_ALIAS'),keyPass=System.getenv('DOOZ_RELEASE_KEY_PASSWORD')
+android { namespace 'dooz.tapcell';compileSdk 35
+ defaultConfig { applicationId 'dooz.tapcell';minSdk 21;targetSdk 35;versionCode 6;versionName '1.5.0';manifestPlaceholders=[TapsellMediationAppKey:appId] }
+ signingConfigs { if(store&&storePass&&alias&&keyPass) release { storeFile file(store);storePassword storePass;keyAlias alias;keyPassword keyPass } }
+ buildTypes { debug { minifyEnabled false };release { minifyEnabled true;shrinkResources true;proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),'proguard-rules.pro';if(signingConfigs.findByName('release'))signingConfig signingConfigs.release } }
+ compileOptions { sourceCompatibility JavaVersion.VERSION_17;targetCompatibility JavaVersion.VERSION_17 }
+}
+tasks.register('buildWeb',Exec){workingDir rootProject.file('..');commandLine System.getProperty('os.name').toLowerCase().contains('windows')?['cmd','/c','npm','run','build']:['npm','run','build']}
+tasks.register('syncWebAssets',Sync){dependsOn ':buildWeb';from rootProject.file('../dist');into layout.projectDirectory.dir('src/main/assets/www');exclude '**/*.apk','**/*.idsig';doFirst{delete layout.projectDirectory.dir('src/main/assets/www')}}
+preBuild.dependsOn syncWebAssets
+dependencies { implementation 'androidx.appcompat:appcompat:1.7.1';implementation 'ir.tapsell:tapsell:1.4.0-alpha04';implementation 'ir.tapsell.mediation.adapter:legacy:1.4.0-alpha04' }

@@ -1,0 +1,1 @@
+-keepclassmembers class dooz.tapcell.** { @android.webkit.JavascriptInterface <methods>; }
