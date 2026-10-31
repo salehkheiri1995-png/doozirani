@@ -7,7 +7,6 @@ export interface ThreeDoozState {
   phase: GamePhase;
   winner: Player | 'draw' | null;
   winningLine: number[] | null;
-  selectedFromIndex: number | null;
   moveCount: number;
 }
 
@@ -46,7 +45,6 @@ export function createInitialThreeDoozState(): ThreeDoozState {
     phase: 'placing',
     winner: null,
     winningLine: null,
-    selectedFromIndex: null,
     moveCount: 0,
   };
 }
@@ -151,7 +149,6 @@ export function placeStoneThreeDooz(state: ThreeDoozState, index: number): Three
     phase: trappedWinner ? 'gameover' : nextPhase,
     winner: trappedWinner,
     winningLine: null,
-    selectedFromIndex: null,
     moveCount: state.moveCount + 1,
   };
 }
@@ -181,7 +178,6 @@ export function moveStoneThreeDooz(
       winner,
       winningLine: line,
       phase: 'gameover',
-      selectedFromIndex: null,
       moveCount: state.moveCount + 1,
     };
   }
@@ -200,7 +196,6 @@ export function moveStoneThreeDooz(
     turn: nextPlayer,
     winner: trappedWinner,
     phase: trappedWinner ? 'gameover' : 'moving',
-    selectedFromIndex: null,
     moveCount: state.moveCount + 1,
   };
 }

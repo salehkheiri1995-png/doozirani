@@ -4,7 +4,6 @@ import {
   getLegalPlacements,
   getLegalMoveDestinations,
   checkThreeDoozWinner,
-  THREE_DOOZ_WINNING_LINES,
 } from './threeDoozLogic';
 import {
   TwelveDoozState,

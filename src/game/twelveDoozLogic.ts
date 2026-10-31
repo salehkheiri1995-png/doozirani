@@ -6,8 +6,7 @@ export interface TwelveDoozState {
   turn: Player;
   phase: GamePhase;
   mustRemoveOpponentStone: boolean;
-  selectedFromIndex: number | null;
-  winner: Player | null;
+  winner: Player | 'draw' | null;
   winningReason: string | null;
   lastFormedLines: number[][];
   moveCount: number;
@@ -80,7 +79,6 @@ export function createInitialTwelveDoozState(): TwelveDoozState {
     turn: 'player1',
     phase: 'placing',
     mustRemoveOpponentStone: false,
-    selectedFromIndex: null,
     winner: null,
     winningReason: null,
     lastFormedLines: [],
@@ -246,6 +244,7 @@ export function removeOpponentStone(state: TwelveDoozState, index: number): Twel
       winningReason: 'مهره‌های حریف به کمتر از ۳ عدد رسید!',
       phase: 'gameover',
       lastFormedLines: [],
+      moveCount: state.moveCount + 1,
     };
   }
 
@@ -287,7 +286,6 @@ export function moveStoneTwelveDooz(
       return {
         ...state,
         board: nextBoard,
-        selectedFromIndex: null,
         mustRemoveOpponentStone: true,
         lastFormedLines: mills,
         moveCount: state.moveCount + 1,
@@ -295,12 +293,7 @@ export function moveStoneTwelveDooz(
     }
   }
 
-  return advanceTurnAfterAction(
-    { ...state, selectedFromIndex: null },
-    nextBoard,
-    state.unplacedCount,
-    opponent
-  );
+  return advanceTurnAfterAction(state, nextBoard, state.unplacedCount, opponent);
 }
 
 function advanceTurnAfterAction(
@@ -331,7 +324,7 @@ function advanceTurnAfterAction(
         phase: 'gameover',
         winner,
         winningReason: 'تمام راه‌های حرکت بازیکن بسته شد!',
-        selectedFromIndex: null,
+        lastFormedLines: [],
         mustRemoveOpponentStone: false,
         moveCount: prevState.moveCount + 1,
       };
@@ -344,7 +337,8 @@ function advanceTurnAfterAction(
     unplacedCount: nextUnplaced,
     turn: nextTurn,
     phase: nextPhase,
-    selectedFromIndex: null,
+    winningReason: null,
+    lastFormedLines: [],
     mustRemoveOpponentStone: false,
     moveCount: prevState.moveCount + 1,
   };

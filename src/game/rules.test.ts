@@ -1,21 +1,18 @@
-import test from 'node:test';
+import { test } from 'vitest';
 import assert from 'node:assert/strict';
 import {
   createInitialThreeDoozState,
   placeStoneThreeDooz,
   moveStoneThreeDooz,
-  checkThreeDoozWinner,
   getLegalPlacements,
 } from './threeDoozLogic';
 import {
   createInitialTwelveDoozState,
   placeStoneTwelveDooz,
   removeOpponentStone,
-  getNewMillsFormedAt,
   getRemovableOpponentStones,
-  countStonesOnBoard,
 } from './twelveDoozLogic';
-import { getThreeDoozAIMove, getTwelveDoozAIMove } from './aiPlayer';
+import { getThreeDoozAIMove } from './aiPlayer';
 
 test('Three-Dooz: Initial state has 3 unplaced stones each and placing phase', () => {
   const s0 = createInitialThreeDoozState();
