@@ -126,9 +126,9 @@ async function startServer() {
     if (zoneString.includes('6ae1bdbd35198b5ded9c8803')) {
       adType = 'banner';
       title = 'بنر استاندارد تپسل';
-    } else if (zoneString.includes('6ae1bd1817758066a4da86c1')) {
+    } else if (zoneString.includes('6ae359267ae48b79af14cf0d') || zoneString.includes('6ae1bd1817758066a4da86c1')) {
       adType = 'rewarded';
-      title = 'ویدیو جایزه‌ای تپسل s01';
+      title = 'ویدیو جایزه‌ای تپسل';
       videoUrl = '/ad_tapsell_pro.mp4';
     } else if (zoneString.includes('6ae1bdde187ee67e6b59bcd8')) {
       adType = 'interstitial';

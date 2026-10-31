@@ -8,11 +8,17 @@ This branch uses Tapsell Mediation Android SDK `1.4.0-alpha04`, pinned for repro
 - Official sample: https://github.com/tapsellorg/TapsellMediation-AndroidSample
 - Android: minSdk 21, compile/target SDK 35, JDK 17, Gradle 8.9, AGP 8.7.3.
 
-The supplied 64-character app key and 24-character placement IDs were not verified as Mediation credentials. The current Mediation sample uses a manifest app ID and UUID zone IDs. Never pass `s01`; it is only a display name. Obtain compatible values from the publisher panel or Tapsell support instead of inventing IDs.
+This project uses the legacy adapter (`ir.tapsell.mediation.adapter:legacy`), so the publisher panel's 64-character app key and 24-character placement IDs are the correct credentials. The key is embedded through the `TapsellMediationAppKey` manifest placeholder; zone IDs are passed to `Tapsell.requestRewardedAd`, `Tapsell.requestBannerAd`, and the other format methods. Never pass `s01`; it is only a display name.
+
+Configured placements:
+
+- Standard banner: `6ae1bdbd35198b5ded9c8803`
+- Rewarded video: `6ae359267ae48b79af14cf0d`
+- Interstitial: not configured yet
 
 ## Configuration
 
-Set `tapsell.mediation.appId=REAL_MEDIATION_APP_ID` in untracked `android/local.properties`, or export `TAPSELL_MEDIATION_APP_ID`. Export `VITE_TAPSELL_REWARDED_ZONE_ID`, `VITE_TAPSELL_BANNER_ZONE_ID`, and `VITE_TAPSELL_INTERSTITIAL_ZONE_ID` before the web build.
+Set `tapsell.mediation.appId=REAL_APP_KEY` in untracked `android/local.properties`, or export `TAPSELL_MEDIATION_APP_ID`. A built-in fallback in `android/app/build.gradle` keeps local release builds reproducible when neither is set. Zone IDs have defaults in `src/utils/tapsellService.ts`; override them with `VITE_TAPSELL_REWARDED_ZONE_ID`, `VITE_TAPSELL_BANNER_ZONE_ID`, and `VITE_TAPSELL_INTERSTITIAL_ZONE_ID` before the web build.
 
 ## Build
 
