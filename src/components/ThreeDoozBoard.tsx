@@ -1,25 +1,26 @@
 import React from 'react';
-import { Player, GamePhase } from '../game/doozTypes';
-import { StonePiece } from './StonePiece';
+import { Player } from '../game/doozTypes';
+import { StonePiece, type StoneAppearance } from './StonePiece';
+import type { BoardRenderConfig } from '../economy/catalog';
 
 interface ThreeDoozBoardProps {
   board: (Player | null)[];
-  turn: Player;
-  phase: GamePhase;
   selectedFromIndex: number | null;
   validDestinations: number[];
   winningLine: number[] | null;
   onCellClick: (index: number) => void;
+  theme: BoardRenderConfig;
+  stoneAppearance: Record<Player, StoneAppearance>;
 }
 
 export const ThreeDoozBoard: React.FC<ThreeDoozBoardProps> = ({
   board,
-  turn,
-  phase,
   selectedFromIndex,
   validDestinations,
   winningLine,
   onCellClick,
+  theme,
+  stoneAppearance,
 }) => {
   // SVG coordinates for 9 points (percentage based)
   const coords = [
@@ -37,12 +38,23 @@ export const ThreeDoozBoard: React.FC<ThreeDoozBoardProps> = ({
   return (
     <div className="relative w-full max-w-[360px] aspect-square mx-auto p-4 select-none">
       {/* Persian Wooden Board Outer Frame */}
-      <div className="w-full h-full rounded-3xl persian-wood persian-board-border relative overflow-hidden flex items-center justify-center p-3 shadow-2xl">
+      <div
+        className="w-full h-full rounded-3xl persian-board-border relative overflow-hidden flex items-center justify-center p-3 shadow-2xl"
+        style={{ background: theme.surface, borderColor: theme.frame }}
+      >
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none opacity-25"
+          style={{
+            backgroundImage: `radial-gradient(circle at 20% 20%, ${theme.accent}22 0 2px, transparent 3px), radial-gradient(circle at 80% 70%, ${theme.accent}18 0 2px, transparent 3px)`,
+            backgroundSize: '26px 26px, 32px 32px',
+          }}
+        />
         {/* Persian corner ornament inlays */}
-        <div className="absolute top-2 left-2 w-8 h-8 border-t-2 border-l-2 border-amber-500/40 rounded-tl-xl pointer-events-none" />
-        <div className="absolute top-2 right-2 w-8 h-8 border-t-2 border-r-2 border-amber-500/40 rounded-tr-xl pointer-events-none" />
-        <div className="absolute bottom-2 left-2 w-8 h-8 border-b-2 border-l-2 border-amber-500/40 rounded-bl-xl pointer-events-none" />
-        <div className="absolute bottom-2 right-2 w-8 h-8 border-b-2 border-r-2 border-amber-500/40 rounded-br-xl pointer-events-none" />
+        <div className="absolute top-2 left-2 w-8 h-8 border-t-2 border-l-2 rounded-tl-xl pointer-events-none" style={{ borderColor: `${theme.accent}88` }} />
+        <div className="absolute top-2 right-2 w-8 h-8 border-t-2 border-r-2 rounded-tr-xl pointer-events-none" style={{ borderColor: `${theme.accent}88` }} />
+        <div className="absolute bottom-2 left-2 w-8 h-8 border-b-2 border-l-2 rounded-bl-xl pointer-events-none" style={{ borderColor: `${theme.accent}88` }} />
+        <div className="absolute bottom-2 right-2 w-8 h-8 border-b-2 border-r-2 rounded-br-xl pointer-events-none" style={{ borderColor: `${theme.accent}88` }} />
 
         {/* Board SVG Grid Lines */}
         <svg
@@ -57,18 +69,18 @@ export const ThreeDoozBoard: React.FC<ThreeDoozBoardProps> = ({
             width="68"
             height="68"
             fill="none"
-            stroke="#a67c52"
+            stroke={theme.line}
             strokeWidth="2.2"
             strokeOpacity="0.8"
           />
 
           {/* Cross lines */}
-          <line x1="50" y1="16" x2="50" y2="84" stroke="#a67c52" strokeWidth="2.2" strokeOpacity="0.8" />
-          <line x1="16" y1="50" x2="84" y2="50" stroke="#a67c52" strokeWidth="2.2" strokeOpacity="0.8" />
+          <line x1="50" y1="16" x2="50" y2="84" stroke={theme.line} strokeWidth="2.2" strokeOpacity="0.8" />
+          <line x1="16" y1="50" x2="84" y2="50" stroke={theme.line} strokeWidth="2.2" strokeOpacity="0.8" />
 
           {/* Diagonals */}
-          <line x1="16" y1="16" x2="84" y2="84" stroke="#8b5e34" strokeWidth="1.8" strokeOpacity="0.7" />
-          <line x1="84" y1="16" x2="16" y2="84" stroke="#8b5e34" strokeWidth="1.8" strokeOpacity="0.7" />
+          <line x1="16" y1="16" x2="84" y2="84" stroke={theme.accent} strokeWidth="1.8" strokeOpacity="0.7" />
+          <line x1="84" y1="16" x2="16" y2="84" stroke={theme.accent} strokeWidth="1.8" strokeOpacity="0.7" />
 
           {/* Highlight winning line */}
           {winningLine && (
@@ -77,7 +89,7 @@ export const ThreeDoozBoard: React.FC<ThreeDoozBoardProps> = ({
               y1={coords[winningLine[0]].y}
               x2={coords[winningLine[2]].x}
               y2={coords[winningLine[2]].y}
-              stroke="#fbbf24"
+              stroke={theme.accent}
               strokeWidth="4"
               strokeLinecap="round"
               className="animate-pulse"
@@ -92,7 +104,6 @@ export const ThreeDoozBoard: React.FC<ThreeDoozBoardProps> = ({
             const isSelected = selectedFromIndex === index;
             const isValidDest = validDestinations.includes(index);
             const isWinningStone = winningLine?.includes(index) ?? false;
-            const isCurrentPlayerPiece = stone === turn;
 
             return (
               <div
@@ -108,6 +119,7 @@ export const ThreeDoozBoard: React.FC<ThreeDoozBoardProps> = ({
                 {stone ? (
                   <StonePiece
                     player={stone}
+                    appearance={stoneAppearance[stone]}
                     size="md"
                     isSelected={isSelected}
                     isWinning={isWinningStone}

@@ -1,29 +1,30 @@
 import React from 'react';
-import { Player, GamePhase } from '../game/doozTypes';
-import { StonePiece } from './StonePiece';
+import { Player } from '../game/doozTypes';
+import { StonePiece, type StoneAppearance } from './StonePiece';
+import type { BoardRenderConfig } from '../economy/catalog';
 
 interface TwelveDoozBoardProps {
   board: (Player | null)[];
-  turn: Player;
-  phase: GamePhase;
   mustRemoveStone: boolean;
   removableIndices: number[];
   selectedFromIndex: number | null;
   validDestinations: number[];
   lastFormedLines: number[][];
   onCellClick: (index: number) => void;
+  theme: BoardRenderConfig;
+  stoneAppearance: Record<Player, StoneAppearance>;
 }
 
 export const TwelveDoozBoard: React.FC<TwelveDoozBoardProps> = ({
   board,
-  turn,
-  phase,
   mustRemoveStone,
   removableIndices,
   selectedFromIndex,
   validDestinations,
   lastFormedLines,
   onCellClick,
+  theme,
+  stoneAppearance,
 }) => {
   // SVG coordinates for 24 points: outer (0-7), middle (8-15), inner (16-23)
   const coords = [
@@ -58,17 +59,26 @@ export const TwelveDoozBoard: React.FC<TwelveDoozBoardProps> = ({
     { x: 63.4, y: 63.4 }, // 23
   ];
 
-  const opponent: Player = turn === 'player1' ? 'player2' : 'player1';
-
   return (
     <div className="relative w-full max-w-[390px] aspect-square mx-auto p-2 sm:p-3 select-none">
       {/* Persian Inlay Wooden Board */}
-      <div className="w-full h-full rounded-3xl persian-wood persian-board-border relative overflow-hidden flex items-center justify-center p-2 shadow-2xl">
+      <div
+        className="w-full h-full rounded-3xl persian-board-border relative overflow-hidden flex items-center justify-center p-2 shadow-2xl"
+        style={{ background: theme.surface, borderColor: theme.frame }}
+      >
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none opacity-25"
+          style={{
+            backgroundImage: `radial-gradient(circle at 25% 25%, ${theme.accent}22 0 2px, transparent 3px), radial-gradient(circle at 75% 65%, ${theme.accent}18 0 2px, transparent 3px)`,
+            backgroundSize: '24px 24px, 30px 30px',
+          }}
+        />
         {/* Decorative corner motifs */}
-        <div className="absolute top-2 left-2 w-6 h-6 border-t-2 border-l-2 border-amber-500/50 rounded-tl-lg pointer-events-none" />
-        <div className="absolute top-2 right-2 w-6 h-6 border-t-2 border-r-2 border-amber-500/50 rounded-tr-lg pointer-events-none" />
-        <div className="absolute bottom-2 left-2 w-6 h-6 border-b-2 border-l-2 border-amber-500/50 rounded-bl-lg pointer-events-none" />
-        <div className="absolute bottom-2 right-2 w-6 h-6 border-b-2 border-r-2 border-amber-500/50 rounded-br-lg pointer-events-none" />
+        <div className="absolute top-2 left-2 w-6 h-6 border-t-2 border-l-2 rounded-tl-lg pointer-events-none" style={{ borderColor: `${theme.accent}88` }} />
+        <div className="absolute top-2 right-2 w-6 h-6 border-t-2 border-r-2 rounded-tr-lg pointer-events-none" style={{ borderColor: `${theme.accent}88` }} />
+        <div className="absolute bottom-2 left-2 w-6 h-6 border-b-2 border-l-2 rounded-bl-lg pointer-events-none" style={{ borderColor: `${theme.accent}88` }} />
+        <div className="absolute bottom-2 right-2 w-6 h-6 border-b-2 border-r-2 rounded-br-lg pointer-events-none" style={{ borderColor: `${theme.accent}88` }} />
 
         {/* 12-Dooz Geometric lines */}
         <svg
@@ -77,23 +87,23 @@ export const TwelveDoozBoard: React.FC<TwelveDoozBoardProps> = ({
           strokeLinecap="round"
         >
           {/* Outer Square */}
-          <rect x="10" y="10" width="80" height="80" fill="none" stroke="#a67c52" strokeWidth="2" strokeOpacity="0.85" />
+          <rect x="10" y="10" width="80" height="80" fill="none" stroke={theme.line} strokeWidth="2" strokeOpacity="0.85" />
           {/* Middle Square */}
-          <rect x="23.3" y="23.3" width="53.4" height="53.4" fill="none" stroke="#a67c52" strokeWidth="2" strokeOpacity="0.85" />
+          <rect x="23.3" y="23.3" width="53.4" height="53.4" fill="none" stroke={theme.line} strokeWidth="2" strokeOpacity="0.85" />
           {/* Inner Square */}
-          <rect x="36.6" y="36.6" width="26.8" height="26.8" fill="none" stroke="#a67c52" strokeWidth="2" strokeOpacity="0.85" />
+          <rect x="36.6" y="36.6" width="26.8" height="26.8" fill="none" stroke={theme.line} strokeWidth="2" strokeOpacity="0.85" />
 
           {/* Cross lines connecting midpoints */}
-          <line x1="50" y1="10" x2="50" y2="36.6" stroke="#a67c52" strokeWidth="2" strokeOpacity="0.85" />
-          <line x1="50" y1="63.4" x2="50" y2="90" stroke="#a67c52" strokeWidth="2" strokeOpacity="0.85" />
-          <line x1="10" y1="50" x2="36.6" y2="50" stroke="#a67c52" strokeWidth="2" strokeOpacity="0.85" />
-          <line x1="63.4" y1="50" x2="90" y2="50" stroke="#a67c52" strokeWidth="2" strokeOpacity="0.85" />
+          <line x1="50" y1="10" x2="50" y2="36.6" stroke={theme.line} strokeWidth="2" strokeOpacity="0.85" />
+          <line x1="50" y1="63.4" x2="50" y2="90" stroke={theme.line} strokeWidth="2" strokeOpacity="0.85" />
+          <line x1="10" y1="50" x2="36.6" y2="50" stroke={theme.line} strokeWidth="2" strokeOpacity="0.85" />
+          <line x1="63.4" y1="50" x2="90" y2="50" stroke={theme.line} strokeWidth="2" strokeOpacity="0.85" />
 
           {/* Diagonals connecting corners (Authentic 12-Dooz / Morabaraba rules) */}
-          <line x1="10" y1="10" x2="36.6" y2="36.6" stroke="#8b5e34" strokeWidth="1.8" strokeOpacity="0.8" />
-          <line x1="90" y1="10" x2="63.4" y2="36.6" stroke="#8b5e34" strokeWidth="1.8" strokeOpacity="0.8" />
-          <line x1="10" y1="90" x2="36.6" y2="63.4" stroke="#8b5e34" strokeWidth="1.8" strokeOpacity="0.8" />
-          <line x1="90" y1="90" x2="63.4" y2="63.4" stroke="#8b5e34" strokeWidth="1.8" strokeOpacity="0.8" />
+          <line x1="10" y1="10" x2="36.6" y2="36.6" stroke={theme.accent} strokeWidth="1.8" strokeOpacity="0.8" />
+          <line x1="90" y1="10" x2="63.4" y2="36.6" stroke={theme.accent} strokeWidth="1.8" strokeOpacity="0.8" />
+          <line x1="10" y1="90" x2="36.6" y2="63.4" stroke={theme.accent} strokeWidth="1.8" strokeOpacity="0.8" />
+          <line x1="90" y1="90" x2="63.4" y2="63.4" stroke={theme.accent} strokeWidth="1.8" strokeOpacity="0.8" />
 
           {/* Newly formed Mill/Dooz highlighted lines */}
           {lastFormedLines.map((line, idx) => {
@@ -106,7 +116,7 @@ export const TwelveDoozBoard: React.FC<TwelveDoozBoardProps> = ({
                 y1={start.y}
                 x2={end.x}
                 y2={end.y}
-                stroke="#fbbf24"
+                stroke={theme.accent}
                 strokeWidth="3.5"
                 strokeLinecap="round"
                 className="animate-pulse"
@@ -137,6 +147,7 @@ export const TwelveDoozBoard: React.FC<TwelveDoozBoardProps> = ({
                 {stone ? (
                   <StonePiece
                     player={stone}
+                    appearance={stoneAppearance[stone]}
                     size="sm"
                     isSelected={isSelected}
                     isRemovable={isRemovable}

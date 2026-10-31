@@ -1,7 +1,8 @@
 import React from 'react';
-import { Volume2, VolumeX, RotateCcw, ArrowRight, Coins, ShoppingBag } from 'lucide-react';
+import { Volume2, VolumeX, RotateCcw, ArrowRight, Coins } from 'lucide-react';
 import { Player, GameVariant, GameMode } from '../game/doozTypes';
-import { StonePiece } from './StonePiece';
+import { StonePiece, type StoneAppearance } from './StonePiece';
+import type { FrameRenderConfig } from '../economy/catalog';
 
 interface HeaderHUDProps {
   variant: GameVariant;
@@ -19,6 +20,12 @@ interface HeaderHUDProps {
   onRestart: () => void;
   onBackToMenu: () => void;
   onOpenShop: () => void;
+  stoneAppearance?: Record<Player, StoneAppearance>;
+  profileFrame?: FrameRenderConfig;
+  p1Name?: string;
+  p2Name?: string;
+  p1Frame?: FrameRenderConfig;
+  p2Frame?: FrameRenderConfig;
 }
 
 export const HeaderHUD: React.FC<HeaderHUDProps> = ({
@@ -37,6 +44,12 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
   onRestart,
   onBackToMenu,
   onOpenShop,
+  stoneAppearance,
+  profileFrame,
+  p1Name,
+  p2Name,
+  p1Frame,
+  p2Frame,
 }) => {
   const variantTitle =
     variant === 'three_dooz'
@@ -80,7 +93,13 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
         <div className="text-center">
           <span className="text-xs font-black text-amber-100 block">{variantTitle}</span>
           <span className="text-[10px] text-amber-300/80 block">
-            {mode === 'vs_ai' ? 'بازی با هوش مصنوعی' : mode === 'bluetooth' ? 'بازی با بلوتوث' : 'دو نفره در یک گوشی'}
+            {mode === 'vs_ai'
+              ? 'بازی با هوش مصنوعی'
+              : mode === 'bluetooth'
+                ? 'بازی با بلوتوث'
+                : mode === 'p2p_room'
+                  ? 'اتاق آنلاین'
+                  : 'دو نفره در یک گوشی'}
           </span>
         </div>
 
@@ -132,12 +151,25 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <StonePiece player="player1" size="sm" />
+              <StonePiece player="player1" size="sm" appearance={stoneAppearance?.player1} />
               <div>
                 <span className="text-xs font-black text-teal-100 block">
-                  {mode === 'vs_ai' ? 'شما (فیروزه)' : 'بازیکن ۱ (فیروزه)'}
+                  {p1Name || (mode === 'vs_ai' ? 'شما (فیروزه)' : 'بازیکن ۱ (فیروزه)')}
                 </span>
-                <span className="text-[10px] text-teal-300">صفحه: {p1OnBoard}</span>
+                <span className="text-[10px] text-teal-300">
+                  {(p1Frame ?? profileFrame) ? (
+                    <span
+                      className="inline-block rounded px-1 ml-1"
+                      style={{
+                        border: `1px solid ${(p1Frame ?? profileFrame)!.ring}`,
+                        background: (p1Frame ?? profileFrame)!.background,
+                      }}
+                    >
+                      {(p1Frame ?? profileFrame)!.label}
+                    </span>
+                  ) : null}
+                  صفحه: {p1OnBoard}
+                </span>
               </div>
             </div>
             {p1Unplaced > 0 && (
@@ -166,12 +198,25 @@ export const HeaderHUD: React.FC<HeaderHUDProps> = ({
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <StonePiece player="player2" size="sm" />
+              <StonePiece player="player2" size="sm" appearance={stoneAppearance?.player2} />
               <div>
                 <span className="text-xs font-black text-rose-100 block">
-                  {mode === 'vs_ai' ? 'هوش مصنوعی' : 'بازیکن ۲ (عقیق)'}
+                  {p2Name || (mode === 'vs_ai' ? 'هوش مصنوعی' : 'بازیکن ۲ (عقیق)')}
                 </span>
-                <span className="text-[10px] text-rose-300">صفحه: {p2OnBoard}</span>
+                <span className="text-[10px] text-rose-300">
+                  {(p2Frame ?? profileFrame) ? (
+                    <span
+                      className="inline-block rounded px-1 ml-1"
+                      style={{
+                        border: `1px solid ${(p2Frame ?? profileFrame)!.ring}`,
+                        background: (p2Frame ?? profileFrame)!.background,
+                      }}
+                    >
+                      {(p2Frame ?? profileFrame)!.label}
+                    </span>
+                  ) : null}
+                  صفحه: {p2OnBoard}
+                </span>
               </div>
             </div>
             {p2Unplaced > 0 && (

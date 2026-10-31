@@ -22,7 +22,6 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   reason,
   moveCount,
   mode,
-  variant,
   scores,
   onRestart,
   onOpenModes,
