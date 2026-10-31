@@ -114,13 +114,13 @@ function localPlayerFor(mode: GameMode, bt: MultiplayerState): Player | null {
 
 export default function App() {
   const [appState, setAppState] = useState<PlayScreen>('title');
-  const [variant, setVariant] = useState<MatchVariant>('three_dooz');
+  const [variant, setVariant] = useState<MatchVariant>('twelve_dooz');
   const [mode, setMode] = useState<GameMode>('pass_and_play');
   const [aiDifficulty, setAiDifficulty] = useState<AIDifficulty>('hard');
   const [soundOn, setSoundOn] = useState<boolean>(true);
 
   const [match, setMatch] = useState<MatchState>(() =>
-    createMatchState('three_dooz', createMatchId())
+    createMatchState('twelve_dooz', createMatchId())
   );
   const matchRef = useRef<MatchState>(match);
   const modeRef = useRef<GameMode>(mode);
