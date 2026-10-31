@@ -1,5 +1,5 @@
 import React from 'react';
-import { Smartphone, Bluetooth, Bot, Users, Sparkles, Check, X, ShieldAlert } from 'lucide-react';
+import { Smartphone, Bluetooth, Bot, Users, Sparkles, Check, X } from 'lucide-react';
 import { GameVariant, GameMode, AIDifficulty } from '../game/doozTypes';
 
 interface ModeSelectorModalProps {
@@ -131,21 +131,17 @@ export const ModeSelectorModal: React.FC<ModeSelectorModalProps> = ({
               <p className="text-[11px] text-stone-400">اتصال با بلوتوث بین دو دستگاه اندروید</p>
             </button>
 
-            {/* P2P local room / Wi-Fi */}
+            {/* Online rooms are not shipped yet; never present them as working. */}
             <button
               type="button"
-              onClick={() => setSelectedMode('p2p_room')}
-              className={`text-right p-3 rounded-2xl border transition-all cursor-pointer ${
-                selectedMode === 'p2p_room'
-                  ? 'bg-amber-900/70 border-amber-400 text-amber-100 shadow-md'
-                  : 'bg-stone-900/60 border-stone-800 text-stone-300 hover:bg-stone-800/60'
-              }`}
+              disabled
+              className="text-right p-3 rounded-2xl border bg-stone-950/60 border-stone-800 text-stone-500 opacity-60 cursor-not-allowed"
             >
               <div className="flex items-center gap-2 mb-1">
-                <Users className="w-4 h-4 text-emerald-400" />
-                <span className="font-bold text-xs">وای‌فای و هات‌اسپات</span>
+                <Users className="w-4 h-4 text-stone-500" />
+                <span className="font-bold text-xs">اتاق آنلاین با کد دعوت</span>
               </div>
-              <p className="text-[11px] text-stone-400">اتصال محلی با کد اتاق و هات‌اسپات</p>
+              <p className="text-[11px] text-stone-500">در این نسخه فعال نیست؛ فقط بلوتوث و بازی محلی</p>
             </button>
 
             {/* AI */}

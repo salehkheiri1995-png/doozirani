@@ -1,287 +1,281 @@
-import React, { useState, useEffect } from 'react';
-import { Bluetooth, Radio, CheckCircle2, AlertTriangle, X, RefreshCw, Smartphone, KeyRound, Wifi, Play, Users } from 'lucide-react';
-import { directMultiplayer, MultiplayerState, RemoteDevice } from '../utils/directMultiplayer';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  AlertTriangle,
+  Bluetooth,
+  CheckCircle2,
+  LoaderCircle,
+  RefreshCw,
+  Settings,
+  Smartphone,
+  Unplug,
+  X,
+} from 'lucide-react';
+import {
+  directMultiplayer,
+  type MultiplayerState,
+  type RemoteDevice,
+} from '../utils/directMultiplayer';
+import type { MatchVariant } from '../game/match';
+import type { SessionInfo } from '../multiplayer/protocol';
 
 interface BluetoothModalProps {
   isOpen: boolean;
-  onConnected: () => void;
+  variant: MatchVariant;
+  identity: { displayName: string; stoneSkinId: string; profileFrameId: string };
+  onReady: (session: SessionInfo) => void;
   onClose: () => void;
 }
 
+const PHASE_LABEL: Record<MultiplayerState['phase'], string> = {
+  unsupported: 'پشتیبانی نمی‌شود',
+  permission_required: 'مجوز لازم است',
+  bluetooth_disabled: 'بلوتوث خاموش است',
+  idle: 'آماده',
+  hosting: 'در حال میزبانی',
+  connecting: 'در حال اتصال',
+  handshaking: 'در حال هماهنگی',
+  ready: 'متصل و آماده',
+  disconnected: 'قطع‌شده',
+  error: 'خطا',
+};
+
 export const BluetoothModal: React.FC<BluetoothModalProps> = ({
   isOpen,
-  onConnected,
+  variant,
+  identity,
+  onReady,
   onClose,
 }) => {
-  const [activeTab, setActiveTab] = useState<'room_code' | 'bluetooth'>('room_code');
   const [state, setState] = useState<MultiplayerState>(directMultiplayer.getState());
-  const [inputCode, setInputCode] = useState('');
-  const [isCreatingRoom, setIsCreatingRoom] = useState(false);
-  const [isJoiningRoom, setIsJoiningRoom] = useState(false);
+  const [devices, setDevices] = useState<RemoteDevice[]>([]);
+  const [busy, setBusy] = useState(false);
+  const readyRef = useRef(false);
 
   useEffect(() => {
-    directMultiplayer.setCallbacks(
-      (newState) => {
-        setState(newState);
-        if (newState.isConnected) {
-          onConnected();
-        }
-      },
-      () => {}
-    );
-  }, [onConnected]);
-
-  useEffect(() => {
-    if (isOpen) {
-      if (directMultiplayer.isNativeAndroidBluetoothAvailable()) {
-        directMultiplayer.loadPairedDevices();
-      }
-    }
-  }, [isOpen]);
-
-  useEffect(() => {
-    const reload = () => {
-      if (directMultiplayer.isNativeAndroidBluetoothAvailable()) {
-        directMultiplayer.loadPairedDevices();
-      }
-    };
-    window.addEventListener('doozBtPermissionGranted', reload);
-    return () => window.removeEventListener('doozBtPermissionGranted', reload);
+    directMultiplayer.init();
+    const unsubscribe = directMultiplayer.subscribeState((next) => setState(next));
+    return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    if (!isOpen) {
+      readyRef.current = false;
+      return;
+    }
+    directMultiplayer.setIdentity(identity);
+    void directMultiplayer.refreshStatus().then(() => {
+      setDevices(directMultiplayer.loadPairedDevices());
+    });
+    // The identity values are part of the dependency list on purpose: equipping
+    // a new skin while the panel is open must update the next handshake.
+  }, [isOpen, identity.displayName, identity.stoneSkinId, identity.profileFrameId]);
+
+  useEffect(() => {
+    if (!isOpen || state.phase !== 'ready' || readyRef.current) return;
+    const session = directMultiplayer.getSession();
+    if (!session) return;
+    readyRef.current = true;
+    onReady(session);
+  }, [isOpen, state.phase, onReady]);
 
   if (!isOpen) return null;
 
-  const handleCreateRoom = async () => {
-    setIsCreatingRoom(true);
-    await directMultiplayer.createWirelessRoom();
-    setIsCreatingRoom(false);
+  const native = directMultiplayer.isNativeAvailable();
+  const canStart = native && state.phase !== 'hosting' && state.phase !== 'ready';
+  const showPermission = state.phase === 'permission_required';
+
+  const handleHost = async () => {
+    setBusy(true);
+    try {
+      await directMultiplayer.startHost({ variant, identity });
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const handleJoinRoom = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputCode.trim()) return;
-    setIsJoiningRoom(true);
-    await directMultiplayer.joinWirelessRoom(inputCode.trim());
-    setIsJoiningRoom(false);
+  const handleJoin = async (device: RemoteDevice) => {
+    setBusy(true);
+    try {
+      await directMultiplayer.joinDevice(device.address, { variant, identity });
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const isNative = directMultiplayer.isNativeAndroidBluetoothAvailable();
+  const refreshDevices = () => {
+    setDevices(directMultiplayer.loadPairedDevices());
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fadeIn select-none">
-      <div className="w-full max-w-md bg-[#161009] border-2 border-blue-500/70 rounded-3xl p-5 shadow-2xl text-right">
-        {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-blue-900/50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md select-none">
+      <div className="w-full max-w-md bg-[#12100d] border-2 border-blue-700/70 rounded-3xl p-4 shadow-2xl max-h-[90vh] flex flex-col">
+        <div className="flex items-center justify-between pb-3 border-b border-blue-900/60">
           <div className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-blue-600/30 border border-blue-400 flex items-center justify-center">
-              <Smartphone className="w-5 h-5 text-blue-400" />
+            <div className="w-9 h-9 rounded-2xl bg-blue-900/50 border border-blue-500/50 flex items-center justify-center">
+              <Bluetooth className="w-5 h-5 text-blue-300" />
             </div>
             <div>
-              <h2 className="text-base font-black text-blue-100">بازی دو نفره بین دو گوشی موبایل</h2>
-              <span className="text-[11px] text-blue-300/80">اتصال مستقیم و مسابقه زنده دونفره</span>
+              <h2 className="text-base font-black text-blue-100">اتصال دو گوشی با بلوتوث</h2>
+              <span className="text-[10px] text-blue-300/70">آفلاین و مستقیم؛ بدون اینترنت</span>
             </div>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="بستن پنجره"
+            aria-label="بستن"
             className="p-1.5 rounded-xl text-blue-300 hover:bg-blue-950/60 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Method Switcher Tabs */}
-        <div className="grid grid-cols-2 gap-2 mt-4 p-1 bg-black/50 rounded-2xl border border-blue-900/40">
-          <button
-            type="button"
-            onClick={() => setActiveTab('room_code')}
-            className={`py-2 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-              activeTab === 'room_code'
-                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
-                : 'text-stone-400 hover:text-white'
+        <div className="overflow-y-auto flex-1 space-y-3 pt-3 pr-1">
+          <div
+            className={`p-3 rounded-2xl border-2 flex items-center justify-between ${
+              state.phase === 'ready'
+                ? 'bg-emerald-950/60 border-emerald-500/50'
+                : state.phase === 'error' || state.phase === 'disconnected'
+                  ? 'bg-rose-950/50 border-rose-600/50'
+                  : 'bg-blue-950/40 border-blue-700/40'
             }`}
           >
-            <KeyRound className="w-3.5 h-3.5" />
-            <span>اتصال فوری با کد ۴ رقمی</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('bluetooth')}
-            className={`py-2 px-3 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-              activeTab === 'bluetooth'
-                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md'
-                : 'text-stone-400 hover:text-white'
-            }`}
-          >
-            <Bluetooth className="w-3.5 h-3.5" />
-            <span>بلوتوث مستقیم اندروید</span>
-          </button>
-        </div>
-
-        {/* Current Connection Status Box */}
-        <div className="mt-3.5 p-3 rounded-2xl bg-blue-950/40 border border-blue-800/40 flex items-center justify-between text-xs">
-          <span className="text-blue-200">وضعیت اتصال:</span>
-          {state.isConnected ? (
-            <span className="flex items-center gap-1.5 font-bold text-emerald-400 bg-emerald-950/80 px-2.5 py-1 rounded-full border border-emerald-500/50">
-              <CheckCircle2 className="w-3.5 h-3.5" />
-              متصل به {state.deviceName || 'گوشی حریف'}
+            <div className="flex items-center gap-2">
+              {state.phase === 'ready' ? (
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+              ) : state.phase === 'hosting' || state.phase === 'connecting' || state.phase === 'handshaking' ? (
+                <LoaderCircle className="w-5 h-5 text-blue-300 animate-spin" />
+              ) : (
+                <Smartphone className="w-5 h-5 text-blue-300" />
+              )}
+              <div>
+                <span className="text-xs font-black text-blue-50 block">{PHASE_LABEL[state.phase]}</span>
+                <span className="text-[10px] text-blue-200/70 block">{state.statusText}</span>
+              </div>
+            </div>
+            <span className="text-[10px] font-bold text-blue-200/70">
+              {state.isHost ? 'میزبان' : state.role === 'guest' ? 'مهمان' : ''}
             </span>
+          </div>
+
+          {!native && (
+            <div className="p-3 rounded-2xl bg-amber-950/60 border border-amber-600/50 text-[11px] text-amber-200 leading-5">
+              این قابلیت فقط داخل نسخه اندروید فعال است. در مرورگر وب، بلوتوث کلاسیک دو گوشی
+              در دسترس نیست و اتصال شبیه‌سازی نمی‌شود.
+            </div>
+          )}
+
+          {showPermission && (
+            <button
+              type="button"
+              onClick={() => directMultiplayer.requestPermission()}
+              className="w-full py-2.5 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-black cursor-pointer flex items-center justify-center gap-2"
+            >
+              <Settings className="w-4 h-4" />
+              تأیید مجوز «دستگاه‌های نزدیک»
+            </button>
+          )}
+
+          {state.phase === 'bluetooth_disabled' && (
+            <button
+              type="button"
+              onClick={() => directMultiplayer.requestEnableBluetooth()}
+              className="w-full py-2.5 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-black cursor-pointer flex items-center justify-center gap-2"
+            >
+              <Bluetooth className="w-4 h-4" />
+              روشن‌کردن بلوتوث
+            </button>
+          )}
+
+          {state.error && (
+            <div className="p-3 rounded-2xl bg-rose-950/60 border border-rose-600/50 text-[11px] text-rose-100 leading-5 flex gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{state.error}</span>
+            </div>
+          )}
+
+          <div className="p-3 rounded-2xl bg-stone-900/80 border border-stone-700/60">
+            <span className="text-xs font-black text-amber-100 block mb-1">پیش‌نیاز مهم</span>
+            <p className="text-[11px] text-stone-300 leading-5">
+              این نسخه فقط دستگاه‌های <b>جفت‌شده</b> را نشان می‌دهد. ابتدا هر دو گوشی را از تنظیمات
+              اندروید، بخش بلوتوث، به هم جفت (Pair) کنید. سپس یک گوشی «میزبان» و گوشی دیگر از
+              فهرست پایین «مهمان» شود. هر دو گوشی باید همان نوع دوز را انتخاب کرده باشند.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleHost}
+            disabled={!canStart || busy || !native}
+            className={`w-full py-3 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all ${
+              canStart && native && !busy
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white hover:from-blue-500 active:scale-[0.98] cursor-pointer'
+                : 'bg-stone-800 text-stone-500 cursor-not-allowed'
+            }`}
+          >
+            {busy ? <LoaderCircle className="w-4 h-4 animate-spin" /> : <Bluetooth className="w-4 h-4" />}
+            میزبانی این گوشی
+          </button>
+
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-black text-blue-200">گوشی‌های جفت‌شده</span>
+            <button
+              type="button"
+              onClick={refreshDevices}
+              className="flex items-center gap-1 text-[10px] font-bold text-blue-300 hover:text-blue-100 cursor-pointer"
+            >
+              <RefreshCw className="w-3 h-3" />
+              به‌روزرسانی فهرست
+            </button>
+          </div>
+
+          {devices.length === 0 ? (
+            <div className="p-3 rounded-2xl bg-stone-900/60 border border-dashed border-stone-700 text-center text-[11px] text-stone-400">
+              گوشی جفت‌شده‌ای پیدا نشد. ابتدا از تنظیمات بلوتوث اندروید دو گوشی را جفت کنید، سپس
+              این فهرست را به‌روزرسانی کنید.
+            </div>
           ) : (
-            <span className="text-amber-300 font-medium bg-amber-950/60 px-2.5 py-1 rounded-full border border-amber-500/40">
-              {state.statusText}
-            </span>
+            <div className="space-y-2">
+              {devices.map((device) => (
+                <button
+                  key={device.address}
+                  type="button"
+                  onClick={() => handleJoin(device)}
+                  disabled={busy || state.phase === 'ready'}
+                  className="w-full p-3 rounded-2xl bg-stone-900/80 border border-blue-800/60 hover:border-blue-500 text-right flex items-center justify-between disabled:opacity-50 cursor-pointer"
+                >
+                  <div className="flex items-center gap-2">
+                    <Smartphone className="w-4 h-4 text-blue-300" />
+                    <div>
+                      <span className="text-xs font-bold text-blue-50 block">{device.name}</span>
+                      <span className="text-[10px] text-stone-400">{device.address}</span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] text-blue-300 font-bold">اتصال به‌عنوان مهمان</span>
+                </button>
+              ))}
+            </div>
           )}
         </div>
 
-        {state.error && (
-          <div className="mt-2.5 p-2.5 rounded-xl bg-rose-950/70 border border-rose-800/60 flex items-start gap-2 text-xs text-rose-200">
-            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-            <p className="text-[11px] leading-relaxed">{state.error}</p>
-          </div>
-        )}
-
-        {/* TAB 1: 4-DIGIT INSTANT WIRELESS ROOM */}
-        {activeTab === 'room_code' && (
-          <div className="mt-4 space-y-3.5">
-            <div className="p-3 rounded-2xl bg-stone-900/60 border border-stone-800 text-[11px] text-stone-300 leading-relaxed space-y-1">
-              <p className="font-bold text-amber-300">نحوه اتصال دو گوشی (آسان‌ترین روش):</p>
-              <p>• در یکی از گوشی‌ها روی <strong>«ایجاد بازی جدید»</strong> بزنید تا کد ۴ رقمی دریافت کنید.</p>
-              <p>• در گوشی دوم، همان کد ۴ رقمی را وارد کنید تا بلافاصله به هم وصل شوید!</p>
-            </div>
-
-            {/* If Host: Show Room Code */}
-            {state.roomCode ? (
-              <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-950/80 via-indigo-950/70 to-blue-950/80 border-2 border-blue-500/70 text-center space-y-2">
-                <span className="text-xs text-blue-200 block">کد ورود برای گوشی دوم:</span>
-                <div className="font-mono text-3xl font-black text-amber-300 tracking-widest bg-black/60 py-2 px-4 rounded-xl border border-amber-500/40 inline-block select-all" dir="ltr">
-                  {state.roomCode}
-                </div>
-                <div className="flex items-center justify-center gap-1.5 text-xs text-emerald-300 animate-pulse pt-1">
-                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                  <span>منتظر وارد کردن این کد در گوشی دوم...</span>
-                </div>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={handleCreateRoom}
-                disabled={isCreatingRoom}
-                className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white font-black text-sm shadow-xl hover:from-blue-500 hover:to-indigo-500 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
-              >
-                {isCreatingRoom ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4 fill-current" />}
-                ایجاد بازی جدید (گوشی اول / میزبان)
-              </button>
-            )}
-
-            {/* If Guest: Join by Code */}
-            <form onSubmit={handleJoinRoom} className="space-y-2 pt-1 border-t border-stone-800">
-              <label className="text-xs text-stone-300 block font-bold">ورود به بازی حریف با کد ۴ رقمی:</label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  maxLength={4}
-                  value={inputCode}
-                  onChange={(e) => setInputCode(e.target.value.replace(/\D/g, ''))}
-                  placeholder="مثلاً ۱۲۳۴"
-                  className="flex-1 py-2.5 px-3 rounded-xl bg-black/60 border border-blue-700/50 text-white text-center font-mono text-lg tracking-widest focus:outline-none focus:border-amber-400"
-                  dir="ltr"
-                />
-                <button
-                  type="submit"
-                  disabled={inputCode.length !== 4 || isJoiningRoom}
-                  className="py-2.5 px-5 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-black text-xs transition-all cursor-pointer flex items-center gap-1.5"
-                >
-                  {isJoiningRoom ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Users className="w-3.5 h-3.5" />}
-                  پیوستن
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* TAB 2: NATIVE ANDROID BLUETOOTH */}
-        {activeTab === 'bluetooth' && (
-          <div className="mt-4 space-y-3">
-            {isNative ? (
-              <>
-                <div className="p-3 rounded-2xl bg-stone-900/60 border border-stone-800 text-[11px] text-stone-300 leading-relaxed space-y-1">
-                  <p className="font-bold text-blue-300">بلوتوث نیتیو اندروید فعال است:</p>
-                  <p>دستگاه‌های جفت‌شده (Paired) گوشی شما در زیر قابل مشاهده است:</p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => directMultiplayer.startNativeBluetoothServer()}
-                  className="w-full py-3 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-xs shadow-lg hover:from-blue-500 transition-all flex items-center justify-center gap-2 cursor-pointer"
-                >
-                  <Radio className="w-4 h-4" />
-                  قرار دادن گوشی در حالت میزبان بلوتوث
-                </button>
-
-                {state.pairedDevices.length > 0 ? (
-                  <div className="space-y-1.5 max-h-48 overflow-y-auto">
-                    <span className="text-[11px] text-stone-400 block font-bold">دستگاه‌های بلوتوث جفت‌شده:</span>
-                    {state.pairedDevices.map((dev) => (
-                      <div
-                        key={dev.address}
-                        className="p-2.5 rounded-xl bg-black/60 border border-blue-900/50 flex items-center justify-between text-xs"
-                      >
-                        <div>
-                          <span className="font-bold text-white block">{dev.name}</span>
-                          <span className="text-[10px] text-stone-400 font-mono" dir="ltr">{dev.address}</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => directMultiplayer.connectNativeBluetooth(dev.address)}
-                          className="py-1 px-3 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold cursor-pointer"
-                        >
-                          اتصال
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-[11px] text-stone-400 text-center py-2">
-                    دستگاه بلوتوث جفت‌شده‌ای یافت نشد. می‌توانید از تب «کد ۴ رقمی» بدون نیاز به بلوتوث متصل شوید.
-                  </p>
-                )}
-              </>
-            ) : (
-              <div className="p-4 rounded-2xl bg-stone-900/70 border border-stone-800 space-y-2 text-xs leading-relaxed text-stone-300">
-                <div className="flex items-center gap-2 text-amber-300 font-bold">
-                  <Smartphone className="w-4 h-4 text-amber-400" />
-                  <span>اتصال مستقیم موبایل به موبایل</span>
-                </div>
-                <p className="text-[11px] text-stone-300">
-                  برای اتصال دو گوشی اندروید، از تب **«اتصال فوری با کد ۴ رقمی»** استفاده کنید. این روش بدون نیاز به جفت‌سازی بلوتوث یا مجوزهای سخت‌گیرانه سیستم‌عامل، دو گوشی را در کمتر از ۲ ثانیه به یکدیگر وصل می‌کند!
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('room_code')}
-                  className="w-full mt-2 py-2.5 rounded-xl bg-blue-600 text-white font-bold text-xs cursor-pointer"
-                >
-                  رفتن به تب اتصال با کد ۴ رقمی
-                </button>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Footer */}
-        {state.isConnected && (
-          <div className="mt-4 pt-3 border-t border-stone-800">
+        <div className="mt-3 pt-3 border-t border-blue-900/60 flex gap-2">
+          {(state.phase === 'ready' || state.phase === 'hosting' || state.phase === 'connecting' || state.phase === 'handshaking') && (
             <button
               type="button"
-              onClick={onClose}
-              className="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 text-white font-black text-sm shadow-xl cursor-pointer flex items-center justify-center gap-2"
+              onClick={() => directMultiplayer.disconnect()}
+              className="flex-1 py-2.5 rounded-2xl bg-rose-900/60 border border-rose-600/50 text-rose-100 text-xs font-black hover:bg-rose-800/70 cursor-pointer flex items-center justify-center gap-1.5"
             >
-              <CheckCircle2 className="w-4 h-4" />
-              شروع بازی دو نفره
+              <Unplug className="w-4 h-4" />
+              قطع اتصال
             </button>
-          </div>
-        )}
+          )}
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 py-2.5 rounded-2xl bg-stone-800 text-stone-300 text-xs font-bold hover:bg-stone-700 cursor-pointer"
+          >
+            بستن
+          </button>
+        </div>
       </div>
     </div>
   );
