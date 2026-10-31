@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy, RotateCcw, Settings, Frown } from 'lucide-react';
+import { Trophy, RotateCcw, Settings, Frown, Home } from 'lucide-react';
 import { Player, GameVariant, GameMode } from '../game/doozTypes';
 import { StonePiece } from './StonePiece';
 
@@ -13,6 +13,7 @@ interface GameOverModalProps {
   scores: { player1: number; player2: number; draws: number };
   onRestart: () => void;
   onOpenModes: () => void;
+  onBackToMenu: () => void;
   onWatchAd?: () => void;
 }
 
@@ -25,6 +26,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   scores,
   onRestart,
   onOpenModes,
+  onBackToMenu,
   onWatchAd,
 }) => {
   if (!isOpen || !winner) return null;
@@ -124,6 +126,15 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
           >
             <Settings className="w-3.5 h-3.5" />
             تغییر حالت یا نوع بازی
+          </button>
+
+          <button
+            type="button"
+            onClick={onBackToMenu}
+            className="w-full py-2.5 px-4 rounded-2xl bg-stone-950/80 border border-stone-700/70 text-amber-200 font-bold text-xs hover:bg-stone-900 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+          >
+            <Home className="w-3.5 h-3.5" />
+            بازگشت به منوی اصلی
           </button>
         </div>
       </div>

@@ -1044,6 +1044,7 @@ export default function App() {
         scores={scores}
         onRestart={requestRestart}
         onOpenModes={() => setIsModesOpen(true)}
+        onBackToMenu={backToMenu}
         onWatchAd={adsAllowed ? openRewardedAd : undefined}
       />
 
