@@ -602,9 +602,16 @@ export default function App() {
 
   const backToMenu = () => {
     if (mode === 'bluetooth') directMultiplayer.disconnect();
-    setAppState('title');
+    setIsModesOpen(false);
+    setIsRulesOpen(false);
+    setIsShopOpen(false);
+    setIsRewardedAdOpen(false);
     setRematchRequested(false);
     setRematchWaiting(false);
+    setMode('pass_and_play');
+    modeRef.current = 'pass_and_play';
+    beginLocalMatch(variantRef.current);
+    setAppState('title');
   };
 
   const requestRestart = () => {
@@ -909,81 +916,85 @@ export default function App() {
         </div>
       )}
 
-      <HeaderHUD
-        variant={match.variant}
-        mode={mode}
-        turn={currentTurnPlayer}
-        p1Unplaced={currentUnplaced.player1}
-        p2Unplaced={currentUnplaced.player2}
-        p1OnBoard={currentP1OnBoard}
-        p2OnBoard={currentP2OnBoard}
-        phase={currentPhase}
-        mustRemoveStone={match.variant === 'twelve_dooz' && match.twelve.mustRemoveOpponentStone}
-        isSoundOn={soundOn}
-        coins={economy.coins}
-        onToggleSound={toggleSound}
-        onRestart={requestRestart}
-        onBackToMenu={backToMenu}
-        onOpenShop={() => setIsShopOpen(true)}
-        stoneAppearance={stoneAppearance}
-        p1Frame={p1Frame}
-        p2Frame={p2Frame}
-        p1Name={p1Name}
-        p2Name={p2Name}
-      />
-
-      <main className="w-full flex-1 flex flex-col items-center justify-center px-2 py-1 max-w-md mx-auto">
-        {match.variant === 'three_dooz' ? (
-          <ThreeDoozBoard
-            board={match.three.board}
-            selectedFromIndex={selectedForLocal}
-            validDestinations={threeValidDests}
-            winningLine={match.three.winningLine}
-            onCellClick={handleCellClick}
-            theme={boardTheme}
+      {(appState === 'playing' || appState === 'gameover') && (
+        <>
+          <HeaderHUD
+            variant={match.variant}
+            mode={mode}
+            turn={currentTurnPlayer}
+            p1Unplaced={currentUnplaced.player1}
+            p2Unplaced={currentUnplaced.player2}
+            p1OnBoard={currentP1OnBoard}
+            p2OnBoard={currentP2OnBoard}
+            phase={currentPhase}
+            mustRemoveStone={match.variant === 'twelve_dooz' && match.twelve.mustRemoveOpponentStone}
+            isSoundOn={soundOn}
+            coins={economy.coins}
+            onToggleSound={toggleSound}
+            onRestart={requestRestart}
+            onBackToMenu={backToMenu}
+            onOpenShop={() => setIsShopOpen(true)}
             stoneAppearance={stoneAppearance}
+            p1Frame={p1Frame}
+            p2Frame={p2Frame}
+            p1Name={p1Name}
+            p2Name={p2Name}
           />
-        ) : (
-          <TwelveDoozBoard
-            board={match.twelve.board}
-            mustRemoveStone={match.twelve.mustRemoveOpponentStone}
-            removableIndices={removableIndices}
-            selectedFromIndex={selectedForLocal}
-            validDestinations={twelveValidDests}
-            lastFormedLines={match.twelve.lastFormedLines}
-            onCellClick={handleCellClick}
-            theme={boardTheme}
-            stoneAppearance={stoneAppearance}
-          />
-        )}
-      </main>
 
-      <div className="w-full max-w-md mx-auto px-3 pb-3 pt-1 z-20 flex items-center justify-between gap-2 select-none">
-        <button
-          type="button"
-          onClick={backToMenu}
-          className="flex-1 py-2.5 px-3 rounded-2xl bg-stone-900/90 border border-stone-700/60 text-amber-200 font-black text-xs hover:bg-stone-800 transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer shadow-md"
-        >
-          <span>بازگشت به منو</span>
-        </button>
+          <main className="w-full flex-1 flex flex-col items-center justify-center px-2 py-1 max-w-md mx-auto">
+            {match.variant === 'three_dooz' ? (
+              <ThreeDoozBoard
+                board={match.three.board}
+                selectedFromIndex={selectedForLocal}
+                validDestinations={threeValidDests}
+                winningLine={match.three.winningLine}
+                onCellClick={handleCellClick}
+                theme={boardTheme}
+                stoneAppearance={stoneAppearance}
+              />
+            ) : (
+              <TwelveDoozBoard
+                board={match.twelve.board}
+                mustRemoveStone={match.twelve.mustRemoveOpponentStone}
+                removableIndices={removableIndices}
+                selectedFromIndex={selectedForLocal}
+                validDestinations={twelveValidDests}
+                lastFormedLines={match.twelve.lastFormedLines}
+                onCellClick={handleCellClick}
+                theme={boardTheme}
+                stoneAppearance={stoneAppearance}
+              />
+            )}
+          </main>
 
-        <button
-          type="button"
-          onClick={() => setIsModesOpen(true)}
-          className="flex-1 py-2.5 px-3 rounded-2xl bg-stone-900/90 border border-stone-700/60 text-stone-300 font-bold text-xs hover:bg-stone-800 transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer shadow-md"
-        >
-          <span>تغییر حالت بازی</span>
-        </button>
+          <div className="w-full max-w-md mx-auto px-3 pb-3 pt-1 z-20 flex items-center justify-between gap-2 select-none">
+            <button
+              type="button"
+              onClick={backToMenu}
+              className="flex-1 py-2.5 px-3 rounded-2xl bg-stone-900/90 border border-stone-700/60 text-amber-200 font-black text-xs hover:bg-stone-800 transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer shadow-md"
+            >
+              <span>منوی اصلی</span>
+            </button>
 
-        <button
-          type="button"
-          onClick={() => setIsRulesOpen(true)}
-          className="py-2.5 px-3 rounded-2xl bg-amber-950/60 border border-amber-700/60 text-amber-300 font-bold text-xs hover:bg-amber-900/70 transition-all flex items-center justify-center gap-1 active:scale-95 cursor-pointer shadow-md"
-        >
-          <HelpCircle className="w-3.5 h-3.5" />
-          <span>قوانین</span>
-        </button>
-      </div>
+            <button
+              type="button"
+              onClick={() => setIsModesOpen(true)}
+              className="flex-1 py-2.5 px-3 rounded-2xl bg-stone-900/90 border border-stone-700/60 text-stone-300 font-bold text-xs hover:bg-stone-800 transition-all flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer shadow-md"
+            >
+              <span>تغییر حالت بازی</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setIsRulesOpen(true)}
+              className="py-2.5 px-3 rounded-2xl bg-amber-950/60 border border-amber-700/60 text-amber-300 font-bold text-xs hover:bg-amber-900/70 transition-all flex items-center justify-center gap-1 active:scale-95 cursor-pointer shadow-md"
+            >
+              <HelpCircle className="w-3.5 h-3.5" />
+              <span>قوانین</span>
+            </button>
+          </div>
+        </>
+      )}
 
       <ModeSelectorModal
         isOpen={isModesOpen}
