@@ -5,7 +5,7 @@ const defaultZones={
 };
 
 export const TAPSELL_CONFIG={
- packageName:'dooz.tapcell',
+ packageName:'doozz.tapcell',
  appName:'دوز اصیل ایرانی',
  zones:{
   rewardedVideo:import.meta.env.VITE_TAPSELL_REWARDED_ZONE_ID||defaultZones.rewardedVideo,

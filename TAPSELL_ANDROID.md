@@ -51,7 +51,7 @@ The signed APK is `app/build/outputs/apk/release/app-release.apk` (an `-unsigned
 pwsh -File ..\scripts\verify-apk-signature.ps1 -Apk app\build\outputs\apk\release\app-release.apk
 ```
 
-`applicationId` must stay `dooz.tapcell` and `versionCode` must increase for every upload. See `BAZAAR_KEY_CHANGE.md` for the pending key-reset request and the backup rules.
+`applicationId` must stay `doozz.tapcell` and `versionCode` must increase for every upload. The legacy `dooz.tapcell` package is kept only for the already-published app; see `BAZAAR_KEY_CHANGE.md` for its pending key-reset request and the backup rules.
 
 ## Logs and troubleshooting
 
