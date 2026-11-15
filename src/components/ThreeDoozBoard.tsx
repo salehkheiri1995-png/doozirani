@@ -1,6 +1,7 @@
 import React from 'react';
 import { Player, GamePhase } from '../game/doozTypes';
 import { StonePiece } from './StonePiece';
+import { CosmeticSkin, BoardTheme } from '../utils/monetization';
 
 interface ThreeDoozBoardProps {
   board: (Player | null)[];
@@ -9,6 +10,8 @@ interface ThreeDoozBoardProps {
   selectedFromIndex: number | null;
   validDestinations: number[];
   winningLine: number[] | null;
+  skin?: CosmeticSkin;
+  theme?: BoardTheme;
   onCellClick: (index: number) => void;
 }
 
@@ -19,8 +22,15 @@ export const ThreeDoozBoard: React.FC<ThreeDoozBoardProps> = ({
   selectedFromIndex,
   validDestinations,
   winningLine,
+  skin,
+  theme,
   onCellClick,
 }) => {
+  // Board theme resolution
+  const trayClass = theme && theme.boardClass ? theme.boardClass : 'persian-wood';
+  const lineCol = theme?.lineColor ?? '#a67c52';
+  const lineOp = theme?.lineOpacity ?? 0.8;
+  const diagCol = theme ? lineCol : '#8b5e34';
   // SVG coordinates for 9 points (percentage based)
   const coords = [
     { x: 16, y: 16 }, // 0: top-left
@@ -37,7 +47,7 @@ export const ThreeDoozBoard: React.FC<ThreeDoozBoardProps> = ({
   return (
     <div className="relative w-full max-w-[360px] aspect-square mx-auto p-4 select-none">
       {/* Persian Wooden Board Outer Frame */}
-      <div className="w-full h-full rounded-3xl persian-wood persian-board-border relative overflow-hidden flex items-center justify-center p-3 shadow-2xl">
+      <div className={`w-full h-full rounded-3xl ${trayClass} persian-board-border relative overflow-hidden flex items-center justify-center p-3 shadow-2xl`}>
         {/* Persian corner ornament inlays */}
         <div className="absolute top-2 left-2 w-8 h-8 border-t-2 border-l-2 border-amber-500/40 rounded-tl-xl pointer-events-none" />
         <div className="absolute top-2 right-2 w-8 h-8 border-t-2 border-r-2 border-amber-500/40 rounded-tr-xl pointer-events-none" />
@@ -57,18 +67,18 @@ export const ThreeDoozBoard: React.FC<ThreeDoozBoardProps> = ({
             width="68"
             height="68"
             fill="none"
-            stroke="#a67c52"
+            stroke={lineCol}
             strokeWidth="2.2"
-            strokeOpacity="0.8"
+            strokeOpacity={lineOp}
           />
 
           {/* Cross lines */}
-          <line x1="50" y1="16" x2="50" y2="84" stroke="#a67c52" strokeWidth="2.2" strokeOpacity="0.8" />
-          <line x1="16" y1="50" x2="84" y2="50" stroke="#a67c52" strokeWidth="2.2" strokeOpacity="0.8" />
+          <line x1="50" y1="16" x2="50" y2="84" stroke={lineCol} strokeWidth="2.2" strokeOpacity={lineOp} />
+          <line x1="16" y1="50" x2="84" y2="50" stroke={lineCol} strokeWidth="2.2" strokeOpacity={lineOp} />
 
           {/* Diagonals */}
-          <line x1="16" y1="16" x2="84" y2="84" stroke="#8b5e34" strokeWidth="1.8" strokeOpacity="0.7" />
-          <line x1="84" y1="16" x2="16" y2="84" stroke="#8b5e34" strokeWidth="1.8" strokeOpacity="0.7" />
+          <line x1="16" y1="16" x2="84" y2="84" stroke={diagCol} strokeWidth="1.8" strokeOpacity={lineOp} />
+          <line x1="84" y1="16" x2="16" y2="84" stroke={diagCol} strokeWidth="1.8" strokeOpacity={lineOp} />
 
           {/* Highlight winning line */}
           {winningLine && (
@@ -108,6 +118,7 @@ export const ThreeDoozBoard: React.FC<ThreeDoozBoardProps> = ({
                 {stone ? (
                   <StonePiece
                     player={stone}
+                    skin={skin}
                     size="md"
                     isSelected={isSelected}
                     isWinning={isWinningStone}

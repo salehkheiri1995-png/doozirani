@@ -1,5 +1,5 @@
 import React from 'react';
-import { Trophy, RotateCcw, Settings, Frown } from 'lucide-react';
+import { Trophy, RotateCcw, Frown, Coins } from 'lucide-react';
 import { Player, GameVariant, GameMode } from '../game/doozTypes';
 import { StonePiece } from './StonePiece';
 
@@ -11,8 +11,9 @@ interface GameOverModalProps {
   mode: GameMode;
   variant: GameVariant;
   scores: { player1: number; player2: number; draws: number };
+  coinsEarned?: number;
   onRestart: () => void;
-  onOpenModes: () => void;
+  onBackToMenu: () => void;
   onWatchAd?: () => void;
 }
 
@@ -24,8 +25,9 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   mode,
   variant,
   scores,
+  coinsEarned = 0,
   onRestart,
-  onOpenModes,
+  onBackToMenu,
   onWatchAd,
 }) => {
   if (!isOpen || !winner) return null;
@@ -39,7 +41,7 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
   } else if (mode === 'vs_ai') {
     titleText = isP1 ? '🎉 تبریک! شما برنده شدید!' : '🤖 هوش مصنوعی برنده شد!';
   } else {
-    titleText = isP1 ? '🎉 بازیکن ۱ (فیروزه) برنده شد!' : '🎉 بازیکن ۲ (عقیق) برنده شد!';
+    titleText = isP1 ? '🎉 بازیکن ۱ برنده شد!' : '🎉 بازیکن ۲ برنده شد!';
   }
 
   return (
@@ -95,8 +97,16 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
           </div>
         </div>
 
+        {/* Coins earned banner */}
+        {coinsEarned > 0 && (
+          <div className="flex items-center justify-center gap-2 py-2 px-4 rounded-2xl bg-gradient-to-r from-yellow-950/80 via-amber-950/80 to-yellow-950/80 border border-yellow-500/50 mb-3 animate-fadeIn">
+            <Coins className="w-4 h-4 text-yellow-400" />
+            <span className="text-sm font-black text-yellow-300">+{coinsEarned} سکه کسب کردید!</span>
+          </div>
+        )}
+
         {/* Actions */}
-        <div className="space-y-2 mt-5">
+        <div className="space-y-2 mt-2">
           {/* Rewarded Ad Option */}
           {onWatchAd && (
             <button
@@ -120,11 +130,10 @@ export const GameOverModal: React.FC<GameOverModalProps> = ({
 
           <button
             type="button"
-            onClick={onOpenModes}
+            onClick={onBackToMenu}
             className="w-full py-2.5 px-4 rounded-2xl bg-stone-800 text-stone-200 font-bold text-xs hover:bg-stone-700 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
           >
-            <Settings className="w-3.5 h-3.5" />
-            تغییر حالت یا نوع بازی
+            بازگشت به منو
           </button>
         </div>
       </div>

@@ -42,6 +42,7 @@ export class DirectMultiplayerManager {
   private onStateChange: ((state: MultiplayerState) => void) | null = null;
   private onMessage: ((data: any) => void) | null = null;
   private pollInterval: any = null;
+  private roomWaitTimer: any = null;
   private lastMessageIndex = 0;
   private myPlayerId: string = Math.random().toString(36).substring(2, 9);
 
@@ -187,6 +188,14 @@ export class DirectMultiplayerManager {
           statusText: `اتاق ساخته شد! کد: ${data.roomCode} (منتظر ورود گوشی حریف...)`,
         });
         this.startPolling(data.roomCode);
+        this.roomWaitTimer = setTimeout(() => {
+          if (!this.state.isConnected) {
+            this.update({
+              error: 'هیچ گوشی‌ای ظرف ۵۰ ثانیه متصل نشد. دوباره تلاش کنید.',
+              statusText: 'مهلت انتظار به پایان رسید',
+            });
+          }
+        }, 50000);
         return data.roomCode;
       }
       throw new Error('عدم موفقیت در ساخت اتاق');
@@ -241,6 +250,10 @@ export class DirectMultiplayerManager {
 
         if (json.success) {
           if (!this.state.isConnected && json.isGuestConnected) {
+            if (this.roomWaitTimer) {
+              clearTimeout(this.roomWaitTimer);
+              this.roomWaitTimer = null;
+            }
             this.update({
               isConnected: true,
               deviceName: 'گوشی حریف',
@@ -267,6 +280,10 @@ export class DirectMultiplayerManager {
     if (this.pollInterval) {
       clearInterval(this.pollInterval);
       this.pollInterval = null;
+    }
+    if (this.roomWaitTimer) {
+      clearTimeout(this.roomWaitTimer);
+      this.roomWaitTimer = null;
     }
   }
 

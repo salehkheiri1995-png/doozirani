@@ -38,7 +38,7 @@ import { RewardedAdModal } from './components/RewardedAdModal';
 import { InterstitialAdModal } from './components/InterstitialAdModal';
 import { TapsellBanner } from './components/TapsellBanner';
 import { useTapsell } from './hooks/useTapsell';
-import { getPlayerCoins, savePlayerCoins, addPlayerCoins } from './utils/monetization';
+import { getPlayerCoins, savePlayerCoins, addPlayerCoins, getSkinById, getActiveSkinId, recordWinStreak, getBoardThemeById, getActiveBoardThemeId } from './utils/monetization';
 import {
   playStonePlaceSound,
   playStoneSelectSound,
@@ -58,7 +58,7 @@ export default function App() {
   const [appState, setAppState] = useState<'title' | 'playing' | 'gameover'>('title');
 
   // Game configuration
-  const [variant, setVariant] = useState<GameVariant>('three_dooz');
+  const [variant, setVariant] = useState<GameVariant>('twelve_dooz');
   const [mode, setMode] = useState<GameMode>('pass_and_play');
   const [aiDifficulty, setAiDifficulty] = useState<AIDifficulty>('hard');
   const [soundOn, setSoundOn] = useState<boolean>(true);
@@ -72,6 +72,15 @@ export default function App() {
 
   // Economy & Coins
   const [coins, setCoins] = useState<number>(() => getPlayerCoins());
+  const [lastCoinsEarned, setLastCoinsEarned] = useState<number>(0);
+
+  // Active cosmetic skin (persisted in localStorage)
+  const [activeSkinId, setActiveSkinIdState] = useState<string>(getActiveSkinId);
+  const activeSkin = getSkinById(activeSkinId);
+
+  // Active board theme (persisted in localStorage)
+  const [activeThemeId, setActiveThemeIdState] = useState<string>(getActiveBoardThemeId);
+  const activeTheme = getBoardThemeById(activeThemeId);
 
   // Modals
   const [isModesOpen, setIsModesOpen] = useState(false);
@@ -116,6 +125,14 @@ export default function App() {
   useEffect(() => {
     document.body.dataset.state = appState;
   }, [appState]);
+
+  // Re-read active skin & board theme whenever the shop closes (they may have changed)
+  useEffect(() => {
+    if (!isShopOpen) {
+      setActiveSkinIdState(getActiveSkinId());
+      setActiveThemeIdState(getActiveBoardThemeId());
+    }
+  }, [isShopOpen]);
 
   // Handle Global Start / Enter / Space on Title screen
   useEffect(() => {
@@ -272,12 +289,20 @@ export default function App() {
       checkAndShowInterstitialAd();
       if (next.winner === 'player1') {
         setScores(prev => ({ ...prev, player1: prev.player1 + 1 }));
-        const updatedCoins = addPlayerCoins(30);
+        const streak = recordWinStreak(true);
+        const bonus = Math.min(10 * streak, 50);
+        const earned = 30 + bonus;
+        const updatedCoins = addPlayerCoins(earned);
         setCoins(updatedCoins);
+        setLastCoinsEarned(earned);
       } else if (next.winner === 'player2') {
         setScores(prev => ({ ...prev, player2: prev.player2 + 1 }));
+        recordWinStreak(false);
+        setLastCoinsEarned(0);
       } else {
         setScores(prev => ({ ...prev, draws: prev.draws + 1 }));
+        recordWinStreak(false);
+        setLastCoinsEarned(0);
       }
     } else {
       playStonePlaceSound();
@@ -293,10 +318,16 @@ export default function App() {
       checkAndShowInterstitialAd();
       if (next.winner === 'player1') {
         setScores(prev => ({ ...prev, player1: prev.player1 + 1 }));
-        const updatedCoins = addPlayerCoins(50);
+        const streak = recordWinStreak(true);
+        const bonus = Math.min(10 * streak, 50);
+        const earned = 50 + bonus;
+        const updatedCoins = addPlayerCoins(earned);
         setCoins(updatedCoins);
+        setLastCoinsEarned(earned);
       } else if (next.winner === 'player2') {
         setScores(prev => ({ ...prev, player2: prev.player2 + 1 }));
+        recordWinStreak(false);
+        setLastCoinsEarned(0);
       }
     } else if (next.mustRemoveOpponentStone) {
       playDoozChimeSound();
@@ -732,6 +763,8 @@ export default function App() {
             selectedFromIndex={threeState.selectedFromIndex}
             validDestinations={threeValidDests}
             winningLine={threeState.winningLine}
+            skin={activeSkin}
+            theme={activeTheme}
             onCellClick={(idx) => handleCellClick(idx)}
           />
         ) : (
@@ -744,6 +777,8 @@ export default function App() {
             selectedFromIndex={twelveState.selectedFromIndex}
             validDestinations={twelveValidDests}
             lastFormedLines={twelveState.lastFormedLines}
+            skin={activeSkin}
+            theme={activeTheme}
             onCellClick={(idx) => handleCellClick(idx)}
           />
         )}
@@ -831,8 +866,9 @@ export default function App() {
         mode={mode}
         variant={variant}
         scores={scores}
+        coinsEarned={lastCoinsEarned}
         onRestart={() => restartGame(true)}
-        onOpenModes={() => setIsModesOpen(true)}
+        onBackToMenu={() => setAppState('title')}
         onWatchAd={() => setIsRewardedAdOpen(true)}
       />
 
@@ -848,6 +884,8 @@ export default function App() {
         onCoinsChange={(newCoins) => setCoins(newCoins)}
         onWatchAdClick={() => setIsRewardedAdOpen(true)}
         onClose={() => setIsShopOpen(false)}
+        onSkinChange={(skinId) => setActiveSkinIdState(skinId)}
+        onThemeChange={(themeId) => setActiveThemeIdState(themeId)}
       />
 
       <RewardedAdModal

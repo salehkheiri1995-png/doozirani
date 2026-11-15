@@ -1,6 +1,7 @@
 import React from 'react';
 import { Player, GamePhase } from '../game/doozTypes';
 import { StonePiece } from './StonePiece';
+import { CosmeticSkin, BoardTheme } from '../utils/monetization';
 
 interface TwelveDoozBoardProps {
   board: (Player | null)[];
@@ -11,6 +12,8 @@ interface TwelveDoozBoardProps {
   selectedFromIndex: number | null;
   validDestinations: number[];
   lastFormedLines: number[][];
+  skin?: CosmeticSkin;
+  theme?: BoardTheme;
   onCellClick: (index: number) => void;
 }
 
@@ -23,8 +26,15 @@ export const TwelveDoozBoard: React.FC<TwelveDoozBoardProps> = ({
   selectedFromIndex,
   validDestinations,
   lastFormedLines,
+  skin,
+  theme,
   onCellClick,
 }) => {
+  // Board theme resolution
+  const trayClass = theme && theme.boardClass ? theme.boardClass : 'persian-wood';
+  const lineCol = theme?.lineColor ?? '#a67c52';
+  const lineOp = theme?.lineOpacity ?? 0.85;
+  const diagCol = theme ? lineCol : '#8b5e34';
   // SVG coordinates for 24 points: outer (0-7), middle (8-15), inner (16-23)
   const coords = [
     // Outer square
@@ -63,7 +73,7 @@ export const TwelveDoozBoard: React.FC<TwelveDoozBoardProps> = ({
   return (
     <div className="relative w-full max-w-[390px] aspect-square mx-auto p-2 sm:p-3 select-none">
       {/* Persian Inlay Wooden Board */}
-      <div className="w-full h-full rounded-3xl persian-wood persian-board-border relative overflow-hidden flex items-center justify-center p-2 shadow-2xl">
+      <div className={`w-full h-full rounded-3xl ${trayClass} persian-board-border relative overflow-hidden flex items-center justify-center p-2 shadow-2xl`}>
         {/* Decorative corner motifs */}
         <div className="absolute top-2 left-2 w-6 h-6 border-t-2 border-l-2 border-amber-500/50 rounded-tl-lg pointer-events-none" />
         <div className="absolute top-2 right-2 w-6 h-6 border-t-2 border-r-2 border-amber-500/50 rounded-tr-lg pointer-events-none" />
@@ -77,23 +87,23 @@ export const TwelveDoozBoard: React.FC<TwelveDoozBoardProps> = ({
           strokeLinecap="round"
         >
           {/* Outer Square */}
-          <rect x="10" y="10" width="80" height="80" fill="none" stroke="#a67c52" strokeWidth="2" strokeOpacity="0.85" />
+          <rect x="10" y="10" width="80" height="80" fill="none" stroke={lineCol} strokeWidth="2" strokeOpacity={lineOp} />
           {/* Middle Square */}
-          <rect x="23.3" y="23.3" width="53.4" height="53.4" fill="none" stroke="#a67c52" strokeWidth="2" strokeOpacity="0.85" />
+          <rect x="23.3" y="23.3" width="53.4" height="53.4" fill="none" stroke={lineCol} strokeWidth="2" strokeOpacity={lineOp} />
           {/* Inner Square */}
-          <rect x="36.6" y="36.6" width="26.8" height="26.8" fill="none" stroke="#a67c52" strokeWidth="2" strokeOpacity="0.85" />
+          <rect x="36.6" y="36.6" width="26.8" height="26.8" fill="none" stroke={lineCol} strokeWidth="2" strokeOpacity={lineOp} />
 
           {/* Cross lines connecting midpoints */}
-          <line x1="50" y1="10" x2="50" y2="36.6" stroke="#a67c52" strokeWidth="2" strokeOpacity="0.85" />
-          <line x1="50" y1="63.4" x2="50" y2="90" stroke="#a67c52" strokeWidth="2" strokeOpacity="0.85" />
-          <line x1="10" y1="50" x2="36.6" y2="50" stroke="#a67c52" strokeWidth="2" strokeOpacity="0.85" />
-          <line x1="63.4" y1="50" x2="90" y2="50" stroke="#a67c52" strokeWidth="2" strokeOpacity="0.85" />
+          <line x1="50" y1="10" x2="50" y2="36.6" stroke={lineCol} strokeWidth="2" strokeOpacity={lineOp} />
+          <line x1="50" y1="63.4" x2="50" y2="90" stroke={lineCol} strokeWidth="2" strokeOpacity={lineOp} />
+          <line x1="10" y1="50" x2="36.6" y2="50" stroke={lineCol} strokeWidth="2" strokeOpacity={lineOp} />
+          <line x1="63.4" y1="50" x2="90" y2="50" stroke={lineCol} strokeWidth="2" strokeOpacity={lineOp} />
 
           {/* Diagonals connecting corners (Authentic 12-Dooz / Morabaraba rules) */}
-          <line x1="10" y1="10" x2="36.6" y2="36.6" stroke="#8b5e34" strokeWidth="1.8" strokeOpacity="0.8" />
-          <line x1="90" y1="10" x2="63.4" y2="36.6" stroke="#8b5e34" strokeWidth="1.8" strokeOpacity="0.8" />
-          <line x1="10" y1="90" x2="36.6" y2="63.4" stroke="#8b5e34" strokeWidth="1.8" strokeOpacity="0.8" />
-          <line x1="90" y1="90" x2="63.4" y2="63.4" stroke="#8b5e34" strokeWidth="1.8" strokeOpacity="0.8" />
+          <line x1="10" y1="10" x2="36.6" y2="36.6" stroke={diagCol} strokeWidth="1.8" strokeOpacity={lineOp} />
+          <line x1="90" y1="10" x2="63.4" y2="36.6" stroke={diagCol} strokeWidth="1.8" strokeOpacity={lineOp} />
+          <line x1="10" y1="90" x2="36.6" y2="63.4" stroke={diagCol} strokeWidth="1.8" strokeOpacity={lineOp} />
+          <line x1="90" y1="90" x2="63.4" y2="63.4" stroke={diagCol} strokeWidth="1.8" strokeOpacity={lineOp} />
 
           {/* Newly formed Mill/Dooz highlighted lines */}
           {lastFormedLines.map((line, idx) => {
@@ -137,6 +147,7 @@ export const TwelveDoozBoard: React.FC<TwelveDoozBoardProps> = ({
                 {stone ? (
                   <StonePiece
                     player={stone}
+                    skin={skin}
                     size="sm"
                     isSelected={isSelected}
                     isRemovable={isRemovable}

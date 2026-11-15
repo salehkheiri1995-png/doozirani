@@ -66,11 +66,31 @@ class AndroidBluetoothBridge {
  @JavascriptInterface public boolean isNative(){return true;} @JavascriptInterface public boolean isSupported(){return adapter!=null;} @JavascriptInterface public boolean isEnabled(){if(!hasBtPermissions()){ensureBtPermissions();return false;}try{return adapter!=null&&adapter.isEnabled();}catch(Exception ignored){return false;}}
  @JavascriptInterface public void requestEnable(){if(!hasBtPermissions()){ensureBtPermissions();return;}try{if(adapter!=null&&!adapter.isEnabled())activity.startActivity(new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE));}catch(Exception ignored){}}
  @JavascriptInterface public String getPairedDevices(){if(!hasBtPermissions()){ensureBtPermissions();return"[]";}if(adapter==null)return"[]";try{Set<BluetoothDevice> paired=adapter.getBondedDevices();if(paired==null||paired.isEmpty())return"[]";StringBuilder result=new StringBuilder("[");boolean first=true;for(BluetoothDevice device:paired){if(!first)result.append(',');first=false;String name=device.getName()==null?"AndroidPhone":device.getName().replace('"',' ');result.append("{\"name\":").append(JSONObject.quote(name)).append(",\"address\":").append(JSONObject.quote(device.getAddress())).append('}');}return result.append(']').toString();}catch(Exception ignored){return"[]";}}
- @JavascriptInterface public void startServer(){if(!hasBtPermissions()){ensureBtPermissions();return;}if(adapter==null)return;new Thread(()->{try{serverSocket=adapter.listenUsingRfcommWithServiceRecord("DoozIranian",DOOZ_UUID);post("window.onAndroidBluetoothStatus&&window.onAndroidBluetoothStatus('بلوتوث میزبان فعال است')");clientSocket=serverSocket.accept();post("window.onAndroidBluetoothConnected&&window.onAndroidBluetoothConnected('گوشی دوم')");listen(clientSocket);}catch(Exception error){postError(error);}}).start();}
- @JavascriptInterface public void connectToDevice(String address){if(!hasBtPermissions()){ensureBtPermissions();return;}if(adapter==null||address==null||!address.matches("([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}"))return;new Thread(()->{try{BluetoothDevice device=adapter.getRemoteDevice(address);clientSocket=device.createRfcommSocketToServiceRecord(DOOZ_UUID);adapter.cancelDiscovery();clientSocket.connect();post("window.onAndroidBluetoothConnected&&window.onAndroidBluetoothConnected('گوشی حریف')");listen(clientSocket);}catch(Exception error){postError(error);}}).start();}
+ @JavascriptInterface public void startServer(){if(!hasBtPermissions()){ensureBtPermissions();return;}if(adapter==null)return;new Thread(()->{try{serverSocket=adapter.listenUsingRfcommWithServiceRecord("DoozIranian",DOOZ_UUID);post("window.onAndroidBluetoothStatus&&window.onAndroidBluetoothStatus('بلوتوث میزبان فعال است')");clientSocket=acceptWithTimeout(serverSocket);if(clientSocket==null)return;post("window.onAndroidBluetoothConnected&&window.onAndroidBluetoothConnected('گوشی دوم')");listen(clientSocket);}catch(Exception error){postError(error);}}).start();}
+ @JavascriptInterface public void connectToDevice(String address){if(!hasBtPermissions()){ensureBtPermissions();return;}if(adapter==null||address==null||!address.matches("([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}"))return;new Thread(()->{try{BluetoothDevice device=adapter.getRemoteDevice(address);clientSocket=device.createRfcommSocketToServiceRecord(DOOZ_UUID);adapter.cancelDiscovery();connectWithTimeout(clientSocket);post("window.onAndroidBluetoothConnected&&window.onAndroidBluetoothConnected('گوشی حریف')");listen(clientSocket);}catch(Exception error){postError(error);}}).start();}
  @JavascriptInterface public void sendData(String message){if(!hasBtPermissions())return;if(message==null||message.length()>65536)return;new Thread(()->{try{if(clientSocket!=null){byte[] bytes=message.getBytes("UTF-8");clientSocket.getOutputStream().write(new byte[]{(byte)(bytes.length>>8),(byte)(bytes.length&255)});clientSocket.getOutputStream().write(bytes);clientSocket.getOutputStream().flush();}}catch(Exception ignored){}}).start();}
  @JavascriptInterface public void disconnect(){try{if(clientSocket!=null)clientSocket.close();if(serverSocket!=null)serverSocket.close();}catch(Exception ignored){}post("window.onAndroidBluetoothDisconnected&&window.onAndroidBluetoothDisconnected()");}
- private void listen(BluetoothSocket socket){try{InputStream input=socket.getInputStream();byte[] lengthBuffer=new byte[2];while(input.read(lengthBuffer)==2){int length=((lengthBuffer[0]&255)<<8)|(lengthBuffer[1]&255);if(length<=0||length>65536)break;byte[] data=new byte[length];int read=0;while(read<length){int count=input.read(data,read,length-read);if(count<0)break;read+=count;}String json=new String(data,0,read,"UTF-8");post("window.onAndroidBluetoothData&&window.onAndroidBluetoothData("+JSONObject.quote(json)+")");}}catch(Exception ignored){post("window.onAndroidBluetoothDisconnected&&window.onAndroidBluetoothDisconnected()");}}
+   private BluetoothSocket acceptWithTimeout(BluetoothServerSocket ss){
+    final boolean[] timedOut={false};
+    Thread closer=new Thread(()->{
+      try{ Thread.sleep(60000); if(clientSocket==null){ timedOut[0]=true; try{ ss.close(); }catch(Exception ignored){} } }
+      catch(Exception ignored){}
+    });
+    closer.start();
+    try{ BluetoothSocket s=ss.accept(); if(timedOut[0]){ post("window.onAndroidBluetoothStatus&&window.onAndroidBluetoothStatus('Connection wait timed out')"); return null; } return s; }
+    catch(Exception error){ postError(error); return null; }
+  }
+  private void connectWithTimeout(BluetoothSocket cs){
+    final boolean[] timedOut={false};
+    Thread closer=new Thread(()->{
+      try{ Thread.sleep(40000); if(!cs.isConnected()){ timedOut[0]=true; try{ cs.close(); }catch(Exception ignored){} } }
+      catch(Exception ignored){}
+    });
+    closer.start();
+    try{ cs.connect(); if(timedOut[0]){ post("window.onAndroidBluetoothStatus&&window.onAndroidBluetoothStatus('Connect timed out')"); } }
+    catch(Exception error){ postError(error); }
+  }
+  private void listen(BluetoothSocket socket){try{InputStream input=socket.getInputStream();byte[] lengthBuffer=new byte[2];while(input.read(lengthBuffer)==2){int length=((lengthBuffer[0]&255)<<8)|(lengthBuffer[1]&255);if(length<=0||length>65536)break;byte[] data=new byte[length];int read=0;while(read<length){int count=input.read(data,read,length-read);if(count<0)break;read+=count;}String json=new String(data,0,read,"UTF-8");post("window.onAndroidBluetoothData&&window.onAndroidBluetoothData("+JSONObject.quote(json)+")");}}catch(Exception ignored){post("window.onAndroidBluetoothDisconnected&&window.onAndroidBluetoothDisconnected()");}}
  private void postError(Exception error){post("window.onAndroidBluetoothError&&window.onAndroidBluetoothError("+JSONObject.quote("خطای بلوتوث: "+error.getMessage())+")");}
  private void post(String script){activity.runOnUiThread(()->{try{webView.evaluateJavascript(script,null);}catch(Exception ignored){}});}
 }
