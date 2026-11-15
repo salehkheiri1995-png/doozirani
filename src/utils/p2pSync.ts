@@ -1,3 +1,7 @@
+// ⚠️ منسوخ (Deprecated) — استفاده نکنید.
+// اتاق «وای‌فای/هات‌اسپات» در نسخهٔ ۱.۷.۰ حذف شد چون در APK هیچ سروری وجود ندارد.
+// مسیر معتبر: src/utils/directMultiplayer.ts (بلوتوث نیتیو) و برای نسخهٔ وب، سرور اتاق.
+//
 // Offline Local P2P & Room Sync for two phones on same Wi-Fi / Hotspot or local link
 // Uses BroadcastChannel + LocalStorage cross-tab and WebRTC data channel fallback
 

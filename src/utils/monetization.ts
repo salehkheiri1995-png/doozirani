@@ -146,17 +146,19 @@ export const INITIAL_SKINS: CosmeticSkin[] = [
 const COINS_KEY = 'dooz_player_coins';
 const SKINS_KEY = 'dooz_unlocked_skins';
 const ACTIVE_SKIN_KEY = 'dooz_active_skin';
-const DAILY_BONUS_KEY = 'dooz_last_daily_bonus';
 const WIN_STREAK_KEY = 'dooz_win_streak';
 
+/** سکهٔ شروع برای نصب تازه (یک مقدار واحد در همهٔ مسیرها) */
+export const STARTER_COINS = 150;
+
 export function getPlayerCoins(): number {
-  if (typeof window === 'undefined') return 200;
+  if (typeof window === 'undefined') return STARTER_COINS;
   const saved = localStorage.getItem(COINS_KEY);
   if (saved !== null) {
     const num = parseInt(saved, 10);
-    if (!isNaN(num)) return num;
+    if (!isNaN(num)) return Math.max(0, num);
   }
-  return 100; // Starter coins
+  return STARTER_COINS;
 }
 
 export function savePlayerCoins(coins: number) {
@@ -209,27 +211,238 @@ export function setActiveSkinId(skinId: string) {
   }
 }
 
-// ---- Daily login bonus (once per calendar day) ----
+// ---- Daily login bonus: چرخهٔ ۷ روزه با پاداش پله‌ای ----
+
+import { readJson, writeJson, STORAGE_KEYS } from './storage';
+
+export const DAILY_REWARDS = [50, 60, 70, 80, 100, 120, 150];
+
+interface DailyState {
+  /** آخرین روزی که جایزه گرفته شده (YYYY-MM-DD محلی) */
+  lastClaimDay: string;
+  /** شمارهٔ روز در چرخهٔ ۷ روزه (۱ تا ۷) */
+  streak: number;
+  /** آخرین زمانی که برنامه باز شده — برای تشخیص عقب‌بردن ساعت */
+  lastSeenAt: number;
+}
+
+function dayKey(date = new Date()): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+function yesterdayKey(): string {
+  const d = new Date();
+  d.setDate(d.getDate() - 1);
+  return dayKey(d);
+}
+
+function getDailyState(): DailyState {
+  return readJson<DailyState>(STORAGE_KEYS.daily, {
+    lastClaimDay: '',
+    streak: 0,
+    lastSeenAt: 0,
+  });
+}
+
+export function getDailyStreak(): number {
+  return getDailyState().streak;
+}
+
+/** روز بعدی چرخه و پاداشش */
+export function getNextDailyReward(): { day: number; amount: number } {
+  const state = getDailyState();
+  const claimedToday = state.lastClaimDay === dayKey();
+  const nextDay = claimedToday ? state.streak : (state.streak % DAILY_REWARDS.length) + 1;
+  return { day: nextDay, amount: DAILY_REWARDS[nextDay - 1] };
+}
 
 export function isDailyBonusAvailable(): boolean {
-  if (typeof window === 'undefined') return true;
-  const last = localStorage.getItem(DAILY_BONUS_KEY);
-  if (!last) return true;
-  const today = new Date().toDateString();
-  return last !== today;
+  if (typeof window === 'undefined') return false;
+  const state = getDailyState();
+  const today = dayKey();
+
+  // اگر ساعت دستگاه عقب برده شده باشد، جایزه نمی‌دهیم و تاریخ را جلو نمی‌بریم
+  if (state.lastSeenAt > Date.now() + 60_000) return false;
+
+  if (state.lastSeenAt !== 0 && state.lastSeenAt < Date.now()) {
+    writeJson(STORAGE_KEYS.daily, { ...state, lastSeenAt: Date.now() });
+  }
+
+  return state.lastClaimDay !== today;
 }
 
-export function claimDailyBonus(): { granted: number; available: boolean } {
+export function claimDailyBonus(): { granted: number; available: boolean; day: number } {
   if (!isDailyBonusAvailable()) {
-    return { granted: 0, available: false };
+    const { day } = getNextDailyReward();
+    return { granted: 0, available: false, day };
   }
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(DAILY_BONUS_KEY, new Date().toDateString());
-  }
-  const granted = 80;
+
+  const state = getDailyState();
+  const today = dayKey();
+  // اگر دیروز گرفته، زنجیره ادامه می‌یابد؛ وگرنه از روز ۱ شروع می‌شود
+  const continues = state.lastClaimDay === yesterdayKey();
+  const day = continues ? (state.streak % DAILY_REWARDS.length) + 1 : 1;
+  const granted = DAILY_REWARDS[day - 1];
+
+  writeJson(STORAGE_KEYS.daily, {
+    lastClaimDay: today,
+    streak: day,
+    lastSeenAt: Date.now(),
+  });
+
   addPlayerCoins(granted);
-  return { granted, available: true };
+  return { granted, available: true, day };
 }
+
+// ---- سیاست تبلیغات: سقف روزانه، فاصلهٔ زمانی و میان‌صفحه‌ای سالم ----
+
+export const REWARDED_AMOUNT = 100;
+export const REWARDED_DAILY_LIMIT = 8;
+export const REWARDED_DEMO_DAILY_LIMIT = 3;
+export const REWARDED_COOLDOWN_MS = 60_000;
+export const INTERSTITIAL_MIN_GAMES = 3;
+export const INTERSTITIAL_COOLDOWN_MS = 120_000;
+export const INTERSTITIAL_SESSION_GRACE_MS = 180_000;
+export const NO_ADS_COST = 1500;
+
+export interface AdPolicyState {
+  day: string;
+  rewardedCount: number;
+  demoCount: number;
+  lastRewardedAt: number;
+  interstitialCount: number;
+  lastInterstitialAt: number;
+  gamesFinished: number;
+  sessionStartedAt: number;
+}
+
+const defaultAdState = (): AdPolicyState => ({
+  day: dayKey(),
+  rewardedCount: 0,
+  demoCount: 0,
+  lastRewardedAt: 0,
+  interstitialCount: 0,
+  lastInterstitialAt: 0,
+  gamesFinished: 0,
+  sessionStartedAt: Date.now(),
+});
+
+export function getAdPolicy(): AdPolicyState {
+  const stored = readJson<Partial<AdPolicyState> | null>(STORAGE_KEYS.ads, null);
+  const base = defaultAdState();
+  if (!stored) return base;
+  // شروع روز جدید: شمارنده‌ها صفر می‌شوند ولی زمان‌ها برای فاصله‌گذاری می‌مانند
+  if (stored.day !== base.day) {
+    return {
+      ...base,
+      ...stored,
+      day: base.day,
+      rewardedCount: 0,
+      demoCount: 0,
+      interstitialCount: 0,
+    };
+  }
+  return { ...base, ...stored };
+}
+
+function saveAdPolicy(state: AdPolicyState): void {
+  writeJson(STORAGE_KEYS.ads, state);
+}
+
+export function rewardedAdsLeft(isDemo: boolean): number {
+  const state = getAdPolicy();
+  const limit = isDemo ? REWARDED_DEMO_DAILY_LIMIT : REWARDED_DAILY_LIMIT;
+  const used = isDemo ? state.demoCount : state.rewardedCount;
+  return Math.max(0, limit - used);
+}
+
+export function rewardedCooldownLeftMs(): number {
+  const state = getAdPolicy();
+  if (!state.lastRewardedAt) return 0;
+  return Math.max(0, state.lastRewardedAt + REWARDED_COOLDOWN_MS - Date.now());
+}
+
+export function canWatchRewarded(isDemo: boolean): { allowed: boolean; reason?: string; left: number; cooldownMs: number } {
+  const left = rewardedAdsLeft(isDemo);
+  const cooldownMs = rewardedCooldownLeftMs();
+  if (left <= 0) {
+    return {
+      allowed: false,
+      reason: isDemo
+        ? 'در نسخهٔ پیش‌نمایش فقط ۳ تبلیغ در روز مجاز است. فردا دوباره امتحان کنید.'
+        : 'سقف تبلیغ امروز تمام شد. فردا دوباره امتحان کنید.',
+      left,
+      cooldownMs,
+    };
+  }
+  if (cooldownMs > 0) {
+    return {
+      allowed: false,
+      reason: `برای تبلیغ بعدی ${Math.ceil(cooldownMs / 1000)} ثانیه صبر کنید.`,
+      left,
+      cooldownMs,
+    };
+  }
+  return { allowed: true, left, cooldownMs };
+}
+
+export function registerRewarded(isDemo: boolean): void {
+  const state = getAdPolicy();
+  saveAdPolicy({
+    ...state,
+    rewardedCount: isDemo ? state.rewardedCount : state.rewardedCount + 1,
+    demoCount: isDemo ? state.demoCount + 1 : state.demoCount,
+    lastRewardedAt: Date.now(),
+  });
+}
+
+export function registerGameFinished(): AdPolicyState {
+  const state = getAdPolicy();
+  const next: AdPolicyState = { ...state, gamesFinished: state.gamesFinished + 1 };
+  saveAdPolicy(next);
+  return next;
+}
+
+export function canShowInterstitial(hasZone: boolean, noAds: boolean): boolean {
+  if (!hasZone || noAds) return false;
+  const state = getAdPolicy();
+  const sessionAge = Date.now() - state.sessionStartedAt;
+  if (sessionAge < INTERSTITIAL_SESSION_GRACE_MS) return false;
+  if (state.gamesFinished < INTERSTITIAL_MIN_GAMES) return false;
+  if (state.interstitialCount > 0 && Date.now() - state.lastInterstitialAt < INTERSTITIAL_COOLDOWN_MS) {
+    return false;
+  }
+  return true;
+}
+
+export function registerInterstitial(): void {
+  const state = getAdPolicy();
+  saveAdPolicy({
+    ...state,
+    interstitialCount: state.interstitialCount + 1,
+    lastInterstitialAt: Date.now(),
+    gamesFinished: 0,
+  });
+}
+
+// ---- حذف تبلیغات (خرید با سکه) ----
+
+export function hasNoAds(): boolean {
+  return readJson<boolean>(STORAGE_KEYS.noAds, false) === true;
+}
+
+export function buyNoAds(): boolean {
+  if (hasNoAds()) return false;
+  const coins = getPlayerCoins();
+  if (coins < NO_ADS_COST) return false;
+  savePlayerCoins(coins - NO_ADS_COST);
+  writeJson(STORAGE_KEYS.noAds, true);
+  return true;
+}
+
 
 // ---- Win streak tracking ----
 

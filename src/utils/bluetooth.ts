@@ -1,3 +1,8 @@
+// ⚠️ منسوخ (Deprecated) — استفاده نکنید.
+// اتصال دو گوشی فقط از مسیر src/utils/directMultiplayer.ts انجام می‌شود
+// (بلوتوث نیتیو اندروید). این فایل Web Bluetooth در WebView اندروید کار نمی‌کند
+// و هیچ‌جا import نمی‌شود؛ فقط برای تاریخچه نگه داشته شده است.
+//
 // Web Bluetooth API connector for Android Dooz multiplayer
 // Allows pairing two Android devices or Bluetooth LE peripherals
 

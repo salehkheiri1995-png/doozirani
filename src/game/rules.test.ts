@@ -119,3 +119,40 @@ test('AI Player: Finds winning placement in Three-Dooz', () => {
   assert.equal(aiMove.action, 'place');
   assert.equal(aiMove.to, 2); // 0, 1 -> 2 wins!
 });
+
+test('AI Player: Twelve-Dooz returns a legal placement and never null', () => {
+  let state = createInitialTwelveDoozState();
+  state = placeStoneTwelveDooz(state, 0); // P1
+  state = placeStoneTwelveDooz(state, 12); // P2
+  state = placeStoneTwelveDooz(state, 1); // P1
+  state = placeStoneTwelveDooz(state, 13); // P2
+
+  for (const level of ['easy', 'medium', 'hard'] as const) {
+    const move = getTwelveDoozAIMove(state, level);
+    assert.ok(move, `سطح ${level} باید حرکت داشته باشد`);
+    assert.equal(move.action, 'place');
+    if (move.action === 'place') {
+      assert.equal(state.board[move.to], null, 'حرکت AI باید روی خانهٔ خالی باشد');
+    }
+  }
+});
+
+test('AI Player: Twelve-Dooz removes an opponent stone when a mill is formed', () => {
+  let state = createInitialTwelveDoozState();
+  state = placeStoneTwelveDooz(state, 0); // P1
+  state = placeStoneTwelveDooz(state, 8); // P2
+  state = placeStoneTwelveDooz(state, 1); // P1
+  state = placeStoneTwelveDooz(state, 16); // P2
+  state = placeStoneTwelveDooz(state, 2); // P1 -> mill, must remove
+
+  assert.equal(state.mustRemoveOpponentStone, true);
+  const move = getTwelveDoozAIMove(state, 'hard');
+  assert.ok(move);
+  assert.equal(move.action, 'remove');
+  if (move.action === 'remove') {
+    assert.equal(state.board[move.removeIndex], 'player2');
+    const removable = getRemovableOpponentStones(state.board, 'player2');
+    assert.ok(removable.includes(move.removeIndex));
+  }
+});
+

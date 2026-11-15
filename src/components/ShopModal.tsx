@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Coins, Video, Check, ShoppingBag, X, Sparkles, Gift, Lock, Crown, Grid3x3 } from 'lucide-react';
+import { Coins, Video, Check, ShoppingBag, X, Sparkles, Gift, Lock, Crown, Grid3x3, ShieldOff } from 'lucide-react';
 import {
   CosmeticSkin,
   BoardTheme,
@@ -13,11 +13,24 @@ import {
   savePlayerCoins,
   isDailyBonusAvailable,
   claimDailyBonus,
+  getNextDailyReward,
+  getDailyStreak,
+  getPlayerCoins,
+  NO_ADS_COST,
+  hasNoAds,
+  buyNoAds,
   getUnlockedBoardThemeIds,
   unlockBoardTheme,
   getActiveBoardThemeId,
   setActiveBoardThemeId,
+  rewardedAdsLeft,
+  REWARDED_AMOUNT,
 } from '../utils/monetization';
+import { toFa } from '../utils/format';
+import { androidAds } from '../utils/androidAds';
+
+/** در پیش‌نمایش وب، سقف تبلیغ جایزه‌ای ۳ عدد در روز است (نه ۸) */
+const isDemoPreview = (): boolean => !androidAds.isAvailable();
 import { playStonePlaceSound, playVictorySound } from '../utils/audio';
 
 interface ShopModalProps {
@@ -55,6 +68,9 @@ export const ShopModal: React.FC<ShopModalProps> = ({
   const [category, setCategory] = useState<string>('all');
   const [feedback, setFeedback] = useState<string>('');
   const [dailyClaimed, setDailyClaimed] = useState<boolean>(!isDailyBonusAvailable());
+  const [adsLeft, setAdsLeft] = useState<number>(rewardedAdsLeft(isDemoPreview()));
+  const [noAds, setNoAds] = useState<boolean>(hasNoAds());
+  const nextDaily = getNextDailyReward();
 
   // Re-sync local state from localStorage every time the modal opens
   useEffect(() => {
@@ -64,8 +80,11 @@ export const ShopModal: React.FC<ShopModalProps> = ({
       setUnlockedBoardThemes(getUnlockedBoardThemeIds());
       setActiveTheme(getActiveBoardThemeId());
       setDailyClaimed(!isDailyBonusAvailable());
+      setAdsLeft(rewardedAdsLeft(isDemoPreview()));
+      setNoAds(hasNoAds());
     }
-  }, [isOpen]);
+    // coins در وابستگی‌ها: بعد از دریافت پاداش تبلیغ، شمارندهٔ باقی‌مانده تازه شود
+  }, [isOpen, coins]);
 
   if (!isOpen) return null;
 
@@ -127,13 +146,25 @@ export const ShopModal: React.FC<ShopModalProps> = ({
   const handleClaimDaily = () => {
     const result = claimDailyBonus();
     if (result.available) {
-      onCoinsChange(coins + result.granted);
+      // منبع واحد حقیقت: مقدار ذخیره‌شده را دوباره بخوان
+      onCoinsChange(getPlayerCoins());
       setDailyClaimed(true);
       playVictorySound();
-      flash(`جایزه روزانه ${result.granted} سکه دریافت شد! 🎁`);
+      flash(`جایزهٔ روز ${toFa(result.day)} به ارزش ${toFa(result.granted)} سکه دریافت شد! 🎁`);
     } else {
       setDailyClaimed(true);
-      flash('جایزه روزانه را قبلاً دریافت کرده‌اید. فردا دوباره بیایید!');
+      flash('جایزهٔ امروز را قبلاً گرفته‌اید. فردا دوباره سر بزنید!');
+    }
+  };
+
+  const handleBuyNoAds = () => {
+    if (buyNoAds()) {
+      setNoAds(true);
+      onCoinsChange(getPlayerCoins());
+      playVictorySound();
+      flash('تبلیغات میان‌صفحه‌ای برای همیشه حذف شد! ✨');
+    } else {
+      flash(`سکهٔ کافی ندارید. حذف تبلیغات ${toFa(NO_ADS_COST)} سکه است.`);
     }
   };
 
@@ -157,7 +188,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
           <div className="flex items-center gap-2">
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-950/80 border border-amber-500/60 shadow-inner">
               <Coins className="w-4 h-4 text-yellow-400" />
-              <span className="font-black text-xs text-yellow-300">{coins}</span>
+              <span className="font-black text-xs text-yellow-300">{toFa(coins)}</span>
             </div>
             <button
               type="button"
@@ -180,45 +211,81 @@ export const ShopModal: React.FC<ShopModalProps> = ({
         {/* Body */}
         <div className="overflow-y-auto pr-1 flex-1 space-y-3 mt-3">
           {/* Daily bonus card */}
-          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-teal-950/70 to-emerald-950/80 border-2 border-emerald-500/50 flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-emerald-600/30 border border-emerald-400 flex items-center justify-center">
+          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-teal-950/70 to-emerald-950/80 border-2 border-emerald-500/50 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-emerald-600/30 border border-emerald-400 flex items-center justify-center shrink-0">
                 <Gift className="w-4 h-4 text-emerald-300" />
               </div>
-              <div>
-                <span className="text-xs font-black text-emerald-200 block">جایزه روزانه</span>
-                <span className="text-[10px] text-emerald-300/70 block">هر روز یک‌بار، ۸۰ سکه رایگان</span>
+              <div className="min-w-0">
+                <span className="text-xs font-black text-emerald-200 block">جایزهٔ روزانه</span>
+                <span className="text-[11px] text-emerald-300/80 block">
+                  {dailyClaimed
+                    ? `زنجیرهٔ فعلی: روز ${toFa(getDailyStreak())} از ۷`
+                    : `روز ${toFa(nextDaily.day)} از ۷ · ${toFa(nextDaily.amount)} سکه`}
+                </span>
               </div>
             </div>
             <button
               type="button"
               onClick={handleClaimDaily}
               disabled={dailyClaimed}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+              className={`px-3 py-2 rounded-xl text-xs font-black transition-all shrink-0 cursor-pointer min-h-10 ${
                 dailyClaimed
                   ? 'bg-stone-800 text-stone-500 cursor-not-allowed'
                   : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-md'
               }`}
             >
-              {dailyClaimed ? 'گرفته شد ✓' : 'دریافت'}
+              {dailyClaimed ? 'دریافت شد ✓' : 'دریافت'}
             </button>
           </div>
 
           {/* Rewarded Ad Watch Action Card */}
           <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-950/80 via-yellow-950/60 to-amber-950/80 border-2 border-yellow-500/60 shadow-lg text-center">
             <span className="text-xs font-bold text-amber-200 block mb-1">
-              🎁 دریافت فوری سکه طلا با تماشای فیلم تبلیغاتی
+              🎁 دریافت سکه با تماشای فیلم تبلیغاتی
             </span>
-            <p className="text-[11px] text-stone-300 mb-3">
-              با تماشای یک ویدیوی کوتاه، ۱۰۰ سکه رایگان برای خرید تم‌ها بگیرید!
+            <p className="text-[11px] text-stone-300 mb-2 leading-relaxed">
+              هر تبلیغ {toFa(REWARDED_AMOUNT)} سکه · باقی‌ماندهٔ امروز: {toFa(adsLeft)} تبلیغ
             </p>
             <button
               type="button"
               onClick={onWatchAdClick}
-              className="w-full py-3 px-4 rounded-2xl bg-gradient-to-r from-yellow-500 via-amber-600 to-amber-700 text-white font-black text-xs shadow-xl hover:from-yellow-400 hover:to-amber-600 active:scale-[0.98] transition-all flex items-center justify-center gap-2 cursor-pointer"
+              disabled={adsLeft <= 0}
+              className={`w-full py-3 px-4 rounded-2xl font-black text-xs shadow-xl transition-all flex items-center justify-center gap-2 min-h-11 ${
+                adsLeft > 0
+                  ? 'bg-gradient-to-r from-yellow-500 via-amber-600 to-amber-700 text-white hover:from-yellow-400 hover:to-amber-600 active:scale-[0.98] cursor-pointer'
+                  : 'bg-stone-800 text-stone-500 cursor-not-allowed'
+              }`}
             >
               <Video className="w-4 h-4" />
-              تماشای فیلم تبلیغاتی (+۱۰۰ سکه طلا)
+              {adsLeft > 0 ? `تماشای تبلیغ (+${toFa(REWARDED_AMOUNT)} سکه)` : 'سقف تبلیغ امروز تمام شد'}
+            </button>
+          </div>
+
+          {/* Remove interstitials */}
+          <div className="p-3.5 rounded-2xl bg-stone-900/70 border border-stone-700 flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-xl bg-stone-800 border border-stone-600 flex items-center justify-center shrink-0">
+                <ShieldOff className="w-4 h-4 text-stone-300" />
+              </div>
+              <div className="min-w-0">
+                <span className="text-xs font-black text-stone-100 block">حذف تبلیغات میان‌صفحه‌ای</span>
+                <span className="text-[11px] text-stone-400 block">
+                  {noAds ? 'فعال است — بدون تبلیغ وسط بازی' : `${toFa(NO_ADS_COST)} سکه (همیشگی، همین دستگاه)`}
+                </span>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={handleBuyNoAds}
+              disabled={noAds}
+              className={`px-3 py-2 rounded-xl text-xs font-bold shrink-0 min-h-10 ${
+                noAds
+                  ? 'bg-emerald-950 text-emerald-400 border border-emerald-700/60'
+                  : 'bg-stone-700 hover:bg-stone-600 text-white cursor-pointer'
+              }`}
+            >
+              {noAds ? 'فعال ✓' : 'خرید'}
             </button>
           </div>
 
@@ -272,7 +339,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                             <Crown className="w-3 h-3" /> اساطیری
                           </span>
                         )}
-                        {skin.cost === 0 ? 'رایگان اولیه' : `${skin.cost} سکه`}
+                        {skin.cost === 0 ? 'رایگان اولیه' : `${toFa(skin.cost)} سکه`}
                       </span>
                     </div>
                   </div>
@@ -302,7 +369,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                       }`}
                     >
                       {!canAfford && <Lock className="w-3 h-3" />}
-                      خرید ({skin.cost} سکه)
+                      خرید ({toFa(skin.cost)} سکه)
                     </button>
                   )}
                 </div>
@@ -342,7 +409,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                             <Crown className="w-3 h-3" /> اساطیری
                           </span>
                         )}
-                        {theme.cost === 0 ? 'رایگان اولیه' : `${theme.cost} سکه`}
+                        {theme.cost === 0 ? 'رایگان اولیه' : `${toFa(theme.cost)} سکه`}
                       </span>
                     </div>
                   </div>
@@ -372,7 +439,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
                       }`}
                     >
                       {!canAfford && <Lock className="w-3 h-3" />}
-                      خرید ({theme.cost} سکه)
+                      خرید ({toFa(theme.cost)} سکه)
                     </button>
                   )}
                 </div>

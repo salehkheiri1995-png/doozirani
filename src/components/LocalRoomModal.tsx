@@ -1,3 +1,6 @@
+// ⚠️ منسوخ (Deprecated) — استفاده نکنید.
+// این مودال «اتاق محلی وای‌فای» بود و در نسخهٔ ۱.۷.۰ از برنامه حذف شد.
+// رابط کاربری اتصال دو گوشی: src/components/BluetoothModal.tsx
 import React from 'react';
 import { Wifi, Users, CheckCircle, Copy, X } from 'lucide-react';
 

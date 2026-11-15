@@ -26,6 +26,20 @@ export function isSoundEnabled(): boolean {
   return soundEnabled;
 }
 
+/** توقف صدای وب هنگام رفتن برنامه به پس‌زمینه؛ context دوباره قابل استفاده است. */
+export function pauseAudio(): void {
+  if (audioCtx && audioCtx.state === 'running') {
+    void audioCtx.suspend();
+  }
+}
+
+/** فعال‌سازی دوبارهٔ صدا پس از بازگشت به برنامه. */
+export function resumeAudio(): void {
+  if (audioCtx && audioCtx.state === 'suspended' && soundEnabled) {
+    void audioCtx.resume();
+  }
+}
+
 // Trigger haptic vibration on Android devices if supported
 export function triggerHaptic(pattern: number | number[] = 25) {
   if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {

@@ -1,4 +1,4 @@
-import { Player, GamePhase } from './doozTypes';
+import { Player, Winner, GamePhase, MoveRecord, DEFAULT_GAME_RULES } from './doozTypes';
 
 export interface TwelveDoozState {
   board: (Player | null)[]; // 24 spots
@@ -7,10 +7,14 @@ export interface TwelveDoozState {
   phase: GamePhase;
   mustRemoveOpponentStone: boolean;
   selectedFromIndex: number | null;
-  winner: Player | null;
+  winner: Winner | null;
   winningReason: string | null;
+  winningLine: number[] | null;
   lastFormedLines: number[][];
   moveCount: number;
+  positionCounts: Record<string, number>;
+  movesSinceProgress: number;
+  lastMove: MoveRecord | null;
 }
 
 export const TWELVE_DOOZ_LINES: number[][] = [
@@ -83,8 +87,12 @@ export function createInitialTwelveDoozState(): TwelveDoozState {
     selectedFromIndex: null,
     winner: null,
     winningReason: null,
+    winningLine: null,
     lastFormedLines: [],
     moveCount: 0,
+    positionCounts: {},
+    movesSinceProgress: 0,
+    lastMove: null,
   };
 }
 
@@ -94,6 +102,46 @@ export function countStonesOnBoard(board: (Player | null)[], player: Player): nu
     if (board[i] === player) count++;
   }
   return count;
+}
+
+/** کلید یکتای وضعیت برای تشخیص تکرار (تساوی) */
+export function twelveDoozPositionKey(state: TwelveDoozState): string {
+  const cells = state.board.map((c) => (c === 'player1' ? '1' : c === 'player2' ? '2' : '0')).join('');
+  return `${cells}|${state.turn}|${state.phase}|${state.unplacedCount.player1}${state.unplacedCount.player2}|${
+    state.mustRemoveOpponentStone ? 'r' : '-'
+  }`;
+}
+
+function registerPosition(state: TwelveDoozState): TwelveDoozState {
+  if (!DEFAULT_GAME_RULES.repetitionDraw) return state;
+  const key = twelveDoozPositionKey(state);
+  const count = (state.positionCounts[key] ?? 0) + 1;
+  const positionCounts = { ...state.positionCounts, [key]: count };
+  if (count >= 3) {
+    return {
+      ...state,
+      positionCounts,
+      winner: 'draw',
+      winningReason: 'وضعیت بازی سه بار تکرار شد؛ نتیجه تساوی است',
+      phase: 'gameover',
+      selectedFromIndex: null,
+      mustRemoveOpponentStone: false,
+    };
+  }
+  return { ...state, positionCounts };
+}
+
+function withNoProgressDraw(state: TwelveDoozState): TwelveDoozState {
+  const limit = DEFAULT_GAME_RULES.noProgressDrawLimit;
+  if (!limit || state.movesSinceProgress < limit) return state;
+  return {
+    ...state,
+    winner: 'draw',
+    winningReason: `بازی بدون پیشرفت (${limit} حرکت) متوقف شد؛ نتیجه تساوی است`,
+    phase: 'gameover',
+    selectedFromIndex: null,
+    mustRemoveOpponentStone: false,
+  };
 }
 
 // Checks if a given position is part of a mill/dooz for that player
@@ -165,7 +213,7 @@ export function getLegalTwelveDoozMoves(
     return free;
   }
   const neighbors = TWELVE_DOOZ_ADJACENCY[fromIndex] || [];
-  return neighbors.filter(idx => board[idx] === null);
+  return neighbors.filter((idx) => board[idx] === null);
 }
 
 export function hasAnyLegalTwelveDoozMoves(
@@ -202,23 +250,37 @@ export function placeStoneTwelveDooz(state: TwelveDoozState, index: number): Twe
   const opponent: Player = current === 'player1' ? 'player2' : 'player1';
   const mills = getNewMillsFormedAt(nextBoard, index, current);
 
+  const record: MoveRecord = {
+    player: current,
+    to: index,
+    moveNumber: state.moveCount + 1,
+    formedLines: mills,
+  };
+
   if (mills.length > 0) {
     // Player made a Dooz! They must remove an opponent stone
     const removable = getRemovableOpponentStones(nextBoard, opponent);
     if (removable.length > 0) {
-      return {
+      return registerPosition({
         ...state,
         board: nextBoard,
         unplacedCount: nextUnplaced,
         mustRemoveOpponentStone: true,
         lastFormedLines: mills,
         moveCount: state.moveCount + 1,
-      };
+        movesSinceProgress: 0,
+        lastMove: record,
+      });
     }
   }
 
   // Normal turn pass
-  return advanceTurnAfterAction(state, nextBoard, nextUnplaced, opponent);
+  return advanceTurnAfterAction(
+    { ...state, lastMove: record },
+    nextBoard,
+    nextUnplaced,
+    opponent
+  );
 }
 
 export function removeOpponentStone(state: TwelveDoozState, index: number): TwelveDoozState {
@@ -236,6 +298,14 @@ export function removeOpponentStone(state: TwelveDoozState, index: number): Twel
   const opponentUnplaced = state.unplacedCount[opponent];
   const opponentOnBoard = countStonesOnBoard(nextBoard, opponent);
 
+  const record: MoveRecord = {
+    player: state.turn,
+    to: index,
+    removedStone: index,
+    moveNumber: state.moveCount + 1,
+    formedLines: state.lastFormedLines,
+  };
+
   if (opponentUnplaced === 0 && opponentOnBoard < 3) {
     // Opponent lost!
     return {
@@ -244,16 +314,21 @@ export function removeOpponentStone(state: TwelveDoozState, index: number): Twel
       mustRemoveOpponentStone: false,
       winner: state.turn,
       winningReason: 'مهره‌های حریف به کمتر از ۳ عدد رسید!',
+      winningLine: state.lastFormedLines[0] ?? null,
       phase: 'gameover',
       lastFormedLines: [],
+      moveCount: state.moveCount + 1,
+      movesSinceProgress: 0,
+      lastMove: record,
     };
   }
 
   return advanceTurnAfterAction(
-    { ...state, mustRemoveOpponentStone: false, lastFormedLines: [] },
+    { ...state, mustRemoveOpponentStone: false, lastFormedLines: [], lastMove: record },
     nextBoard,
     state.unplacedCount,
-    opponent
+    opponent,
+    true
   );
 }
 
@@ -269,7 +344,7 @@ export function moveStoneTwelveDooz(
   if (state.board[toIndex] !== null) return state;
 
   const currentStones = countStonesOnBoard(state.board, state.turn);
-  const canFly = currentStones === 3;
+  const canFly = DEFAULT_GAME_RULES.flying && currentStones === 3;
 
   const validDests = getLegalTwelveDoozMoves(state.board, fromIndex, canFly);
   if (!validDests.includes(toIndex)) return state;
@@ -281,22 +356,32 @@ export function moveStoneTwelveDooz(
   const opponent: Player = state.turn === 'player1' ? 'player2' : 'player1';
   const mills = getNewMillsFormedAt(nextBoard, toIndex, state.turn);
 
+  const record: MoveRecord = {
+    player: state.turn,
+    from: fromIndex,
+    to: toIndex,
+    moveNumber: state.moveCount + 1,
+    formedLines: mills,
+  };
+
   if (mills.length > 0) {
     const removable = getRemovableOpponentStones(nextBoard, opponent);
     if (removable.length > 0) {
-      return {
+      return registerPosition({
         ...state,
         board: nextBoard,
         selectedFromIndex: null,
         mustRemoveOpponentStone: true,
         lastFormedLines: mills,
         moveCount: state.moveCount + 1,
-      };
+        movesSinceProgress: 0,
+        lastMove: record,
+      });
     }
   }
 
   return advanceTurnAfterAction(
-    { ...state, selectedFromIndex: null },
+    { ...state, selectedFromIndex: null, lastMove: record },
     nextBoard,
     state.unplacedCount,
     opponent
@@ -307,16 +392,19 @@ function advanceTurnAfterAction(
   prevState: TwelveDoozState,
   nextBoard: (Player | null)[],
   nextUnplaced: { player1: number; player2: number },
-  nextTurn: Player
+  nextTurn: Player,
+  progressed = false
 ): TwelveDoozState {
   const isPlacingDone = nextUnplaced.player1 === 0 && nextUnplaced.player2 === 0;
   const nextStones = countStonesOnBoard(nextBoard, nextTurn);
-  const nextCanFly = isPlacingDone && nextStones === 3;
+  const nextCanFly = isPlacingDone && DEFAULT_GAME_RULES.flying && nextStones === 3;
 
   let nextPhase: GamePhase = 'placing';
   if (isPlacingDone) {
     nextPhase = nextCanFly ? 'flying' : 'moving';
   }
+
+  const movesSinceProgress = progressed ? 0 : prevState.movesSinceProgress + 1;
 
   // Check if next player is trapped (has no legal moves) in moving/flying phase
   if (isPlacingDone) {
@@ -331,21 +419,34 @@ function advanceTurnAfterAction(
         phase: 'gameover',
         winner,
         winningReason: 'تمام راه‌های حرکت بازیکن بسته شد!',
+        winningLine: null,
         selectedFromIndex: null,
         mustRemoveOpponentStone: false,
         moveCount: prevState.moveCount + 1,
+        movesSinceProgress,
       };
     }
   }
 
-  return {
-    ...prevState,
-    board: nextBoard,
-    unplacedCount: nextUnplaced,
-    turn: nextTurn,
-    phase: nextPhase,
-    selectedFromIndex: null,
-    mustRemoveOpponentStone: false,
-    moveCount: prevState.moveCount + 1,
-  };
+  return withNoProgressDraw(
+    registerPosition({
+      ...prevState,
+      board: nextBoard,
+      unplacedCount: nextUnplaced,
+      turn: nextTurn,
+      phase: nextPhase,
+      selectedFromIndex: null,
+      mustRemoveOpponentStone: false,
+      moveCount: prevState.moveCount + 1,
+      movesSinceProgress,
+    })
+  );
+}
+
+/** انتخاب/لغو انتخاب مهره — عملیات UI و بدون تغییر نوبت */
+export function selectTwelveDoozStone(state: TwelveDoozState, index: number | null): TwelveDoozState {
+  if (state.winner || state.mustRemoveOpponentStone) return state;
+  if (index !== null && state.board[index] !== state.turn) return state;
+  const next = state.selectedFromIndex === index ? null : index;
+  return { ...state, selectedFromIndex: next };
 }

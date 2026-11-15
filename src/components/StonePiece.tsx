@@ -29,7 +29,7 @@ export const StonePiece: React.FC<StonePieceProps> = ({
   const resolvedSkin = skin || getSkinById(getActiveSkinId());
 
   const sizeClasses = {
-    sm: 'w-7 h-7 sm:w-8 sm:h-8',
+    sm: 'w-8 h-8 sm:w-9 sm:h-9',
     md: 'w-10 h-10 sm:w-12 sm:h-12',
     lg: 'w-14 h-14 sm:w-16 sm:h-16',
   }[size];
