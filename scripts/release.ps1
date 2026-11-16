@@ -23,7 +23,7 @@ try { & .\gradlew.bat assembleRelease --no-daemon; $code = $LASTEXITCODE } final
 if ($code -ne 0) { Write-Host "Gradle build failed" -ForegroundColor Red; exit 1 }
 
 Write-Host ""
-& pwsh -File (Join-Path $PSScriptRoot 'verify-apk-signature.ps1') -Apk (Join-Path $root 'android\app\build\outputs\apk\release\app-release.apk')
+& powershell.exe -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'verify-apk-signature.ps1') -Apk (Join-Path $root 'android\app\build\outputs\apk\release\app-release.apk')
 if ($LASTEXITCODE -ne 0) { exit 1 }
 
 Copy-Item (Join-Path $root 'android\app\build\outputs\apk\release\app-release.apk') (Join-Path $root 'dooz-release.apk') -Force
